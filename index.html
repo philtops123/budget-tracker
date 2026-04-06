@@ -38,7 +38,8 @@
         .cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
         .cat-title { font-size: 0.95em; font-weight: bold; margin: 0; flex-shrink: 0; }
         .cat-stats { font-size: 0.85em; display: flex; gap: 8px; align-items: center; }
-        .yearly-stats { font-size: 0.75em; color: #555; background: #f8f9fa; padding: 4px 6px; border-radius: 4px; margin-bottom: 6px; display: flex; justify-content: space-between; border: 1px solid #eee; }
+        
+        .yearly-stats { font-size: 0.8em; color: #555; background: #f8f9fa; padding: 4px 6px; border-radius: 4px; margin-bottom: 6px; display: flex; justify-content: space-between; border: 1px solid #e9ecef; }
 
         #statsModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; }
         .modal-content { background: white; padding: 15px; border-radius: 12px; width: 90%; max-width: 400px; margin: 10% auto; }
@@ -62,7 +63,7 @@
     <div class="card" style="border: 1px dashed #ccc; background: #fafafa; padding: 6px;">
         <div class="flex">
             <input type="text" id="newCatName" placeholder="Kategorie" style="flex: 2;">
-            <input type="number" id="newCatBudget" placeholder="CHF" style="flex: 1;">
+            <input type="number" id="newCatBudget" placeholder="CHF/Mt." style="flex: 1;">
             <button class="success" onclick="addCategory()" style="width: 40px;">+</button>
         </div>
     </div>
@@ -70,33 +71,38 @@
     <div id="statsModal"><div class="modal-content" id="statsContent"></div></div>
 
     <script>
-        const initialCategories = [
-            { id: 1, name: "Miete (inkl. Wasser/Strom)", budget: 1300.00, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 2, name: "Hausrat / Privathaftpflicht", budget: 15.60, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 3, name: "Serafe (Radio/TV)", budget: 27.90, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 4, name: "Abfall und Entsorgung", budget: 40.00, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 5, name: "Treibstoff (beide Autos)", budget: 141.65, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 6, name: "Versicherungen (beide)", budget: 68.35, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 7, name: "Strassensteuern (beide)", budget: 80.35, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 8, name: "Service & Unterhalt (beide)", budget: 154.15, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 9, name: "Auto-Rückstellung", budget: 250.00, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 10, name: "Einkäufe (Nahrung/Haushalt)", budget: 1000.00, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 11, name: "Essen auswärts / Bestellt", budget: 250.00, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 12, name: "Kleider", budget: 250.00, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 13, name: "Krankenkasse", budget: 700.00, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 14, name: "Gesundheitskosten (Arzt)", budget: 300.00, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 15, name: "Laufende Abos", budget: 32.00, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 16, name: "Internet", budget: 20.00, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 17, name: "Handy (Natel 2x)", budget: 22.00, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 18, name: "Freizeit-Aktivitäten", budget: 300.00, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 19, name: "Training (Lina & Lara)", budget: 40.50, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 20, name: "Schule / Lager / Geschenk", budget: 30.00, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 21, name: "Geschenke (allgemein)", budget: 75.00, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 22, name: "Ferien", budget: 333.35, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 23, name: "Steuern", budget: 416.65, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 24, name: "Säule 3a", budget: 208.35, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 25, name: "Sparen Kinder & Invest", budget: 100.00, bilanz: 0, yearlySpent: 0, expenses: [] },
-            { id: 26, name: "Reservebetrag", budget: 300.00, bilanz: 0, yearlySpent: 0, expenses: [] }
+        const defaultData = [
+            { id: 101, name: "Miete (inkl. Wasser/Strom)", budget: 1300.00, yearlyBudget: 15600.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 102, name: "Hausrat / Privathaftpflicht", budget: 15.60, yearlyBudget: 187.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 103, name: "Serafe (Radio/TV)", budget: 27.90, yearlyBudget: 335.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 104, name: "Abfall und Entsorgung", budget: 40.00, yearlyBudget: 480.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            
+            { id: 201, name: "Treibstoff (beide Autos)", budget: 141.65, yearlyBudget: 1700.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 202, name: "Versicherungen (beide)", budget: 68.35, yearlyBudget: 820.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 203, name: "Strassensteuern (beide)", budget: 80.35, yearlyBudget: 964.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 204, name: "Service & Unterhalt (beide)", budget: 154.15, yearlyBudget: 1850.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 205, name: "Auto-Rückstellung", budget: 250.00, yearlyBudget: 3000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            
+            { id: 301, name: "Einkäufe (Nahrung/Haushalt)", budget: 1000.00, yearlyBudget: 12000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 302, name: "Essen auswärts / Bestellt", budget: 250.00, yearlyBudget: 3000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 303, name: "Kleider", budget: 250.00, yearlyBudget: 3000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 304, name: "Krankenkasse", budget: 700.00, yearlyBudget: 8400.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 305, name: "Gesundheitskosten (Arzt)", budget: 300.00, yearlyBudget: 3600.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            
+            { id: 401, name: "Laufende Abos", budget: 32.00, yearlyBudget: 384.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 402, name: "Internet", budget: 20.00, yearlyBudget: 240.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 403, name: "Handy (Natel 2x)", budget: 22.00, yearlyBudget: 264.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            
+            { id: 501, name: "Freizeit-Aktivitäten", budget: 300.00, yearlyBudget: 3600.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 502, name: "Training (Lina & Lara)", budget: 40.50, yearlyBudget: 486.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 503, name: "Schule / Lager / Geschenk", budget: 30.00, yearlyBudget: 360.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 504, name: "Geschenke (allgemein)", budget: 75.00, yearlyBudget: 900.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 505, name: "Ferien", budget: 333.35, yearlyBudget: 4000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            
+            { id: 601, name: "Steuern", budget: 416.65, yearlyBudget: 5000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 602, name: "Säule 3a", budget: 208.35, yearlyBudget: 2500.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 603, name: "Sparen Kinder & Invest", budget: 100.00, yearlyBudget: 1200.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 604, name: "Reservebetrag", budget: 300.00, yearlyBudget: 3600.00, yearlySpent: 0, bilanz: 0, expenses: [] }
         ];
 
         let data = [];
@@ -104,12 +110,17 @@
             const saved = localStorage.getItem('budgetData');
             if (saved) {
                 data = JSON.parse(saved);
+                // Kompatibilitäts-Check für alte Daten ohne yearlySpent/yearlyBudget
+                data.forEach(cat => {
+                    if (typeof cat.yearlySpent === 'undefined') cat.yearlySpent = 0;
+                    if (typeof cat.yearlyBudget === 'undefined') cat.yearlyBudget = cat.budget * 12;
+                });
             } else {
-                data = initialCategories;
+                data = defaultData;
                 saveData();
             }
         } catch (e) { 
-            data = initialCategories; 
+            data = defaultData; 
         }
 
         function saveData() {
@@ -121,7 +132,15 @@
             const name = document.getElementById('newCatName').value.trim();
             const budget = parseFloat(document.getElementById('newCatBudget').value);
             if (name && budget) {
-                data.push({ id: Date.now(), name, budget, bilanz: 0, yearlySpent: 0, expenses: [] });
+                data.push({ 
+                    id: Date.now(), 
+                    name, 
+                    budget, 
+                    yearlyBudget: budget * 12, 
+                    yearlySpent: 0, 
+                    bilanz: 0, 
+                    expenses: [] 
+                });
                 document.getElementById('newCatName').value = '';
                 document.getElementById('newCatBudget').value = '';
                 saveData();
@@ -129,7 +148,7 @@
         }
 
         function deleteCategory(id) {
-            if (confirm('Löschen?')) {
+            if (confirm('Kategorie löschen?')) {
                 data = data.filter(c => c.id !== id);
                 saveData();
             }
@@ -163,7 +182,7 @@
         }
 
         function deleteExpense(catId, expId) {
-            if (confirm('Löschen?')) {
+            if (confirm('Ausgabe löschen?')) {
                 const cat = data.find(c => c.id === catId);
                 cat.expenses = cat.expenses.filter(e => e.id !== expId);
                 saveData();
@@ -171,11 +190,11 @@
         }
 
         function resetMonth() {
-            if (confirm('Monat abschliessen?')) {
+            if (confirm('Monat abschliessen? Die Ausgaben werden zum Jahrestotal addiert und der Monat geleert.')) {
                 data.forEach(cat => {
-                    const monthSpent = cat.expenses.reduce((s, e) => s + e.amount, 0);
-                    cat.bilanz += (cat.budget - monthSpent);
-                    cat.yearlySpent = (cat.yearlySpent || 0) + monthSpent;
+                    const monthlySpent = cat.expenses.reduce((s, e) => s + e.amount, 0);
+                    cat.yearlySpent += monthlySpent;
+                    cat.bilanz += (cat.budget - monthlySpent);
                     cat.expenses = [];
                 });
                 saveData();
@@ -215,9 +234,10 @@
                 const rest = cat.budget - spent;
                 const total = cat.bilanz + rest;
                 
-                const yearlyBudget = cat.budget * 12;
-                const yearlySpentTotal = (cat.yearlySpent || 0) + spent;
-                const yearlyRest = yearlyBudget - yearlySpentTotal;
+                // Berechnung für die Jahresübersicht
+                const actualYearlyBudget = cat.yearlyBudget || (cat.budget * 12);
+                const actualYearlySpent = cat.yearlySpent || 0;
+                const yearlyRest = actualYearlyBudget - actualYearlySpent - spent;
 
                 html += `
                 <div class="card">
@@ -225,7 +245,7 @@
                         <div class="cat-title">${cat.name}</div>
                         <div class="cat-stats">
                             <span style="font-weight:bold; color:${rest < 0 ? 'red' : 'green'};">${rest.toFixed(2)}</span>
-                            <span style="color:#888; font-size:0.8em;">(Σ CHF ${total.toFixed(2)})</span>
+                            <span style="color:#888; font-size:0.8em;">(Mt: Σ ${total.toFixed(0)})</span>
                             <div>
                                 <button class="cat-btn" onclick="moveCategory(${cat.id}, -1)">↑</button>
                                 <button class="cat-btn" onclick="moveCategory(${cat.id}, 1)">↓</button>
@@ -235,8 +255,8 @@
                     </div>
                     
                     <div class="yearly-stats">
-                        <span>Jahr: <b>CHF ${yearlyBudget.toFixed(2)}</b></span>
-                        <span>Rest: <b style="color:${yearlyRest < 0 ? 'red' : '#333'}">CHF ${yearlyRest.toFixed(2)}</b></span>
+                        <span>Jahr: ${actualYearlyBudget.toFixed(2)}</span>
+                        <span>Rest: <b style="color:${yearlyRest < 0 ? '#d32f2f' : '#2e7d32'}">${yearlyRest.toFixed(2)}</b></span>
                     </div>
 
                     <div class="flex" style="margin-top:4px;">
