@@ -42,27 +42,6 @@
         h2 { margin: 0; font-size: 1.25em; font-weight: 900; letter-spacing: -0.5px; }
         .title-highlight { color: var(--blue); }
 
-        /* ── AUTOSAVE INDICATOR ── */
-        #autosaveIndicator {
-            font-size: 0.72em;
-            color: var(--muted);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            white-space: nowrap;
-            margin-bottom: 6px;
-            padding: 0 2px;
-            transition: color 0.3s;
-        }
-        #autosaveIndicator.saving { color: var(--yellow); }
-        #autosaveIndicator.saved  { color: var(--green); }
-        .save-dot {
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            background: currentColor;
-            flex-shrink: 0;
-        }
-
         /* ── SUMMARY BAR ── */
         .summary-bar {
             background: var(--card);
@@ -244,10 +223,11 @@
             margin-bottom: 8px;
             font-size: 0.82em;
             color: #7a5c00;
+            display: flex;
             align-items: center;
             gap: 8px;
         }
-        #exportReminder.visible { display: flex; }
+        #exportReminder.hidden { display: none !important; }
 
         .hard-reset {
             margin-top: 18px;
@@ -273,14 +253,8 @@
         </div>
     </div>
 
-    <!-- Autosave Indicator -->
-    <div id="autosaveIndicator">
-        <span class="save-dot"></span>
-        <span id="autosaveText">Wird geladen…</span>
-    </div>
-
     <!-- Export Reminder -->
-    <div id="exportReminder">
+    <div id="exportReminder" class="hidden">
         ⚠️ <span id="reminderText"></span>
         <button class="warning" style="width:auto; padding:3px 10px; font-size:0.85em; margin-left:auto;" onclick="manualExport()">Jetzt sichern</button>
     </div>
@@ -359,41 +333,6 @@
         return (n < 0 ? '−' : '') + Math.abs(n).toFixed(2);
     }
 
-    function fmtTime(isoStr) {
-        if (!isoStr) return '—';
-        const d = new Date(isoStr);
-        const now = new Date();
-        const diffMin = Math.floor((now - d) / 60000);
-        if (diffMin < 1)  return 'gerade eben';
-        if (diffMin < 60) return `vor ${diffMin} Min.`;
-        const diffH = Math.floor(diffMin / 60);
-        if (diffH < 24)   return `vor ${diffH} Std.`;
-        return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}. ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    //  AUTOSAVE INDICATOR
-    // ─────────────────────────────────────────────────────────────
-    function updateSaveIndicator(state) {
-        const el  = document.getElementById('autosaveIndicator');
-        const txt = document.getElementById('autosaveText');
-        el.classList.remove('saving', 'saved');
-        if (state === 'saving') {
-            el.classList.add('saving');
-            txt.textContent = 'Wird gespeichert…';
-        } else {
-            el.classList.add('saved');
-            const last = localStorage.getItem('lastAutoSave');
-            txt.textContent = 'Automatisch gespeichert · ' + fmtTime(last);
-            // after 4 s revert to muted
-            setTimeout(() => {
-                el.classList.remove('saved');
-                const l2 = localStorage.getItem('lastAutoSave');
-                txt.textContent = 'Gespeichert · ' + fmtTime(l2);
-            }, 4000);
-        }
-    }
-
     // ─────────────────────────────────────────────────────────────
     //  DEFAULT DATA
     // ─────────────────────────────────────────────────────────────
@@ -445,8 +384,6 @@
 
     // ─────────────────────────────────────────────────────────────
     //  LOAD / SAVE
-    //  localStorage IS the autosave — data persists across sessions,
-    //  even when iOS Safari kills the tab or the app is closed.
     // ─────────────────────────────────────────────────────────────
     function loadData() {
         try {
@@ -464,80 +401,53 @@
             applyInitialAutoDeductions();
             historyData = [];
         }
-        saveData(false); // persist without re-render
+        saveData();
         checkExportReminder();
-        // Show last-saved time on load
-        const last = localStorage.getItem('lastAutoSave');
-        const txt = document.getElementById('autosaveText');
-        if (txt) txt.textContent = last ? ('Gespeichert · ' + fmtTime(last)) : 'Noch nicht gespeichert';
     }
 
-    // Debounced localStorage write — fires at most once every 800 ms
-    let _saveTimer = null;
     function saveData(shouldRender = true) {
-        if (shouldRender) render();          // render immediately for snappy UI
-        updateSaveIndicator('saving');
-        clearTimeout(_saveTimer);
-        _saveTimer = setTimeout(() => {
-            try {
-                localStorage.setItem('budgetDataV4', JSON.stringify(data));
-                localStorage.setItem('budgetHistory', JSON.stringify(historyData));
-                localStorage.setItem('lastAutoSave', new Date().toISOString());
-            } catch(e) {
-                showToast('⚠️ Speichern fehlgeschlagen – Speicher voll?');
-            }
-            updateSaveIndicator('done');
-            checkExportReminder();
-        }, 800);
+        localStorage.setItem('budgetDataV4', JSON.stringify(data));
+        localStorage.setItem('budgetHistory', JSON.stringify(historyData));
+        if (shouldRender) render();
     }
 
     // ─────────────────────────────────────────────────────────────
-    //  iOS VISIBILITY HANDLER
-    //  When the user switches apps or locks the screen, we do a
-    //  synchronous localStorage write immediately (no debounce)
-    //  so nothing is lost if iOS terminates the page in background.
+    //  AUTO-SAVE ON CLOSE (iPhone protection)
     // ─────────────────────────────────────────────────────────────
-    function flushSave() {
-        clearTimeout(_saveTimer);
-        try {
-            localStorage.setItem('budgetDataV4', JSON.stringify(data));
-            localStorage.setItem('budgetHistory', JSON.stringify(historyData));
-            localStorage.setItem('lastAutoSave', new Date().toISOString());
-        } catch(e) { /* silent */ }
-    }
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'hidden') flushSave();
+    window.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            triggerAutoExport();
+        }
     });
-    window.addEventListener('pagehide',      () => flushSave());
-    window.addEventListener('beforeunload',  () => flushSave());
-    // iOS-specific: fires when user taps away in Safari
-    window.addEventListener('blur',          () => flushSave());
+    window.addEventListener('pagehide', () => { triggerAutoExport(); });
+    window.addEventListener('beforeunload', () => { triggerAutoExport(); });
 
-    // ─────────────────────────────────────────────────────────────
-    //  EXPORT REMINDER (for manual backup, not autosave)
-    // ─────────────────────────────────────────────────────────────
-    function checkExportReminder() {
-        const last = localStorage.getItem('lastExportDate');
-        const el   = document.getElementById('exportReminder');
-        if (!el) return;
-        if (!last) {
-            document.getElementById('reminderText').textContent = 'Noch kein Export vorhanden. Bitte Datei-Backup erstellen!';
-            el.classList.add('visible');
-            return;
-        }
-        const diff = Math.floor((Date.now() - new Date(last).getTime()) / 86400000);
-        if (diff >= 7) {
-            document.getElementById('reminderText').textContent = `Letzter Datei-Export vor ${diff} Tagen – bitte sichern!`;
-            el.classList.add('visible');
-        } else {
-            el.classList.remove('visible');
-        }
+    let lastAutoExport = 0;
+    function triggerAutoExport() {
+        const now = Date.now();
+        if (now - lastAutoExport < 3000) return; // debounce 3s
+        lastAutoExport = now;
+        try {
+            const exportObj = { data, historyData };
+            const json = JSON.stringify(exportObj);
+            const blob = new Blob([json], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = getExportFilename();
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+            localStorage.setItem('lastExportDate', new Date().toISOString().slice(0,10));
+        } catch(e) { /* silent fail */ }
     }
 
     function getExportFilename() {
         const d = new Date();
-        return `budget_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}.json`;
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        const dd = String(d.getDate()).padStart(2,'0');
+        return `budget_${yyyy}-${mm}-${dd}.json`;
     }
 
     function manualExport() {
@@ -549,6 +459,27 @@
         localStorage.setItem('lastExportDate', new Date().toISOString().slice(0,10));
         checkExportReminder();
         showToast('✅ Gespeichert: ' + getExportFilename());
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  EXPORT REMINDER
+    // ─────────────────────────────────────────────────────────────
+    function checkExportReminder() {
+        const last = localStorage.getItem('lastExportDate');
+        const el = document.getElementById('exportReminder');
+        if (!el) return;
+        if (!last) {
+            document.getElementById('reminderText').textContent = 'Noch kein Export vorhanden. Bitte Daten sichern!';
+            el.classList.remove('hidden');
+            return;
+        }
+        const diff = Math.floor((Date.now() - new Date(last).getTime()) / 86400000);
+        if (diff >= 7) {
+            document.getElementById('reminderText').textContent = `Letzter Export vor ${diff} Tagen. Bitte jetzt sichern!`;
+            el.classList.remove('hidden');
+        } else {
+            el.classList.add('hidden');
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -581,7 +512,6 @@
         localStorage.removeItem('budgetDataV4');
         localStorage.removeItem('budgetHistory');
         localStorage.removeItem('lastExportDate');
-        localStorage.removeItem('lastAutoSave');
         data = JSON.parse(JSON.stringify(defaultData));
         applyInitialAutoDeductions();
         historyData = [];
@@ -615,6 +545,7 @@
         const val = parseFloat(newBudget);
         if (cat && !isNaN(val) && val >= 0) {
             cat.budget = val;
+            // Only auto-set yearlyBudget if it was previously also budget*12 (not manually set)
             cat.yearlyBudget = val * 12;
             saveData();
         }
@@ -843,6 +774,8 @@
         const pct    = cat.budget > 0 ? Math.min(100, (spent / cat.budget) * 100) : 0;
         const barColor = pct > 90 ? 'var(--red)' : pct > 65 ? 'var(--yellow)' : 'var(--green)';
         const restColor = rest < 0 ? 'var(--red)' : 'var(--green)';
+
+        const safeId = CSS.escape ? CSS.escape(String(cat.id)) : cat.id;
 
         return `
         <div class="card">
