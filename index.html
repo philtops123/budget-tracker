@@ -3,27 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Budget">
-    <meta name="theme-color" content="#007bff">
-
     <title>Budget Tracker</title>
     <style>
-        body { font-family: -apple-system, sans-serif; padding: 10px; max-width: 600px; margin: auto; background: #f4f4f9; color: #333; }
+        body { font-family: -apple-system, sans-serif; padding: 8px; max-width: 600px; margin: auto; background: #f4f4f9; color: #333; }
         
-        /* Titelbereich */
-        .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        h2 { margin: 0; font-size: 1.4em; font-weight: 800; letter-spacing: 0.5px; }
+        .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        h2 { margin: 0; font-size: 1.2em; font-weight: 800; }
         .title-highlight { color: #007bff; }
         
-        .card { background: white; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        input, button { margin: 4px 0; padding: 8px; width: 100%; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; font-size: 15px; }
+        .card { background: white; border: 1px solid #ddd; padding: 8px; margin-bottom: 6px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        input, button { margin: 2px 0; padding: 6px; width: 100%; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; font-size: 14px; }
         button { cursor: pointer; font-weight: bold; border: none; }
         
-        /* Flexbox */
-        .flex { display: flex; gap: 5px; align-items: center; }
+        .flex { display: flex; gap: 4px; align-items: center; }
         .flex > * { flex: 1; }
         
         .danger { background: #ff4d4d; color: white; }
@@ -31,66 +24,57 @@
         .primary { background: #007bff; color: white; }
         .secondary { background: #6c757d; color: white; }
         
-        .action-btn { padding: 4px; margin: 0 1px; width: auto; font-size: 0.9em; }
-        .cat-btn { padding: 2px 6px; width: auto; background: #eee; color: #333; margin-left: 2px; font-size: 0.8em; }
-        .header-btn { width: auto; padding: 6px 10px; font-size: 1em; margin: 0; }
+        .action-btn { padding: 4px; width: auto; font-size: 0.85em; }
+        .cat-btn { padding: 2px 5px; width: auto; background: #eee; color: #333; font-size: 0.75em; margin-left: 1px; }
+        .header-btn { width: auto; padding: 4px 8px; font-size: 0.9em; }
         
-        /* Tabelle & Scrollbereich */
-        details { margin-top: 8px; font-size: 0.9em; }
-        summary { cursor: pointer; color: #007bff; font-weight: bold; padding: 4px 0; }
-        .table-scroll { max-height: 140px; overflow-y: auto; display: block; border-top: 1px solid #eee; margin-top: 5px; }
+        details { margin-top: 4px; font-size: 0.85em; border-top: 1px solid #f0f0f0; }
+        summary { cursor: pointer; color: #007bff; padding: 2px 0; }
+        .table-scroll { max-height: 120px; overflow-y: auto; }
         
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        th, td { border-bottom: 1px solid #eee; padding: 6px 2px; text-align: left; font-size: 0.85em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        
-        /* Statistik Modal */
-        #statsModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; }
-        .modal-content { background: white; padding: 15px; border-radius: 12px; width: 90%; max-width: 400px; margin: 10% auto; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        .stats-table { table-layout: auto; }
-        .stats-table td { white-space: normal; }
+        th, td { border-bottom: 1px solid #eee; padding: 4px 2px; text-align: left; font-size: 0.8em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        @media (max-width: 600px) {
-            .flex-mobile-row { display: flex !important; flex-direction: row !important; gap: 5px; }
-            .flex-mobile-row > input { margin: 0; }
-        }
+        /* Kompakter Modus für Mobile */
+        .cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+        .cat-title { font-size: 0.95em; font-weight: bold; margin: 0; flex-shrink: 0; }
+        .cat-stats { font-size: 0.85em; display: flex; gap: 8px; align-items: center; }
+
+        #statsModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; }
+        .modal-content { background: white; padding: 15px; border-radius: 12px; width: 90%; max-width: 400px; margin: 10% auto; }
     </style>
 </head>
 <body>
 
     <div class="header-container">
-        <h2><span class="title-highlight">Budget</span> Tracker</h2>
-        <div class="flex" style="gap: 5px; flex: none;">
-            <button class="secondary header-btn" onclick="exportData()" title="Backup">💾</button>
+        <h2><span class="title-highlight">Budget</span></h2>
+        <div class="flex" style="gap: 4px; flex: none;">
+            <button class="primary header-btn" onclick="showStats()">📊</button>
+            <button class="danger header-btn" onclick="resetMonth()">⌛</button>
+            <button class="secondary header-btn" onclick="exportData()">💾</button>
             <input type="file" id="importFile" style="display:none" onchange="importData(event)">
-            <button class="secondary header-btn" onclick="document.getElementById('importFile').click()" title="Laden">📂</button>
+            <button class="secondary header-btn" onclick="document.getElementById('importFile').click()">📂</button>
         </div>
     </div>
 
-    <div class="card flex">
-        <button class="primary" onclick="showStats()">📊 Statistik</button>
-        <button class="danger" onclick="resetMonth()">Monats-Reset</button>
+    <div id="app"></div>
+
+    <div class="card" style="border: 1px dashed #ccc; background: #fafafa; padding: 6px;">
+        <div class="flex">
+            <input type="text" id="newCatName" placeholder="Kategorie" style="flex: 2;">
+            <input type="number" id="newCatBudget" placeholder="CHF" style="flex: 1;">
+            <button class="success" onclick="addCategory()" style="width: 40px;">+</button>
+        </div>
     </div>
 
     <div id="statsModal"><div class="modal-content" id="statsContent"></div></div>
-    
-    <div id="app"></div>
-
-    <div class="card" style="border: 2px dashed #ccc; background: #fafafa;">
-        <h3 style="margin:0 0 8px 0; font-size: 1em;">➕ Neue Kategorie</h3>
-        <div class="flex">
-            <input type="text" id="newCatName" placeholder="Name">
-            <input type="number" step="any" id="newCatBudget" placeholder="CHF">
-        </div>
-        <button class="success" onclick="addCategory()">Hinzufügen</button>
-    </div>
 
     <script>
         let data = [];
-
         try {
             const saved = localStorage.getItem('budgetData');
             if (saved) data = JSON.parse(saved);
-        } catch (e) { console.warn('LocalStorage nicht verfügbar.'); }
+        } catch (e) { console.warn('Storage Error'); }
 
         function saveData() {
             localStorage.setItem('budgetData', JSON.stringify(data));
@@ -109,11 +93,9 @@
         }
 
         function deleteCategory(id) {
-            if (confirm('Kategorie und alle Ausgaben wirklich löschen?')) {
-                if (confirm('Bist du ganz sicher? Dies kann nicht rückgängig gemacht werden.')) {
-                    data = data.filter(c => c.id !== id);
-                    saveData();
-                }
+            if (confirm('Löschen?')) {
+                data = data.filter(c => c.id !== id);
+                saveData();
             }
         }
 
@@ -127,45 +109,21 @@
         }
 
         function addExpense(catId) {
-            const amountInput = document.getElementById('amt_' + catId);
+            const amtInput = document.getElementById('amt_' + catId);
             const noteInput = document.getElementById('note_' + catId);
-            const amount = parseFloat(amountInput.value.replace(',', '.'));
+            const amount = parseFloat(amtInput.value.replace(',', '.'));
             if (amount) {
                 const cat = data.find(c => c.id === catId);
-                
-                const today = new Date();
-                const day = String(today.getDate()).padStart(2, '0');
-                const month = String(today.getMonth() + 1).padStart(2, '0');
-                const formattedDate = `${day}.${month}.`;
-
+                const d = new Date();
                 cat.expenses.push({
                     id: Date.now(),
-                    date: formattedDate,
+                    date: `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`,
                     amount,
                     note: noteInput.value || '-'
                 });
-                amountInput.value = '';
-                noteInput.value = '';
+                amtInput.value = ''; noteInput.value = '';
                 saveData();
             }
-        }
-
-        function editExpense(catId, expId) {
-            const exp = data.find(c => c.id === catId).expenses.find(e => e.id === expId);
-            let newAmt = prompt('Betrag ändern:', exp.amount);
-            if (newAmt !== null) {
-                newAmt = newAmt.replace(',', '.');
-                if (!isNaN(newAmt) && newAmt !== '') {
-                    exp.amount = parseFloat(newAmt);
-                    saveData();
-                }
-            }
-        }
-
-        function editDate(catId, expId) {
-            const exp = data.find(c => c.id === catId).expenses.find(e => e.id === expId);
-            const newDate = prompt('Datum (DD.MM.):', exp.date);
-            if (newDate) { exp.date = newDate; saveData(); }
         }
 
         function deleteExpense(catId, expId) {
@@ -177,7 +135,7 @@
         }
 
         function resetMonth() {
-            if (confirm('Monat abschliessen? Reste gehen in die Bilanz.')) {
+            if (confirm('Monat abschliessen?')) {
                 data.forEach(cat => {
                     cat.bilanz += (cat.budget - cat.expenses.reduce((s, e) => s + e.amount, 0));
                     cat.expenses = [];
@@ -188,13 +146,13 @@
 
         function showStats() {
             let total = 0;
-            let html = `<h3 style="margin-top:0;">📊 Jahres-Bilanz</h3><table class="stats-table">`;
+            let html = `<h3 style="margin:0 0 10px 0;">📊 Bilanz</h3><table style="width:100%; font-size:0.9em;">`;
             data.forEach(cat => {
                 const bal = cat.bilanz + (cat.budget - cat.expenses.reduce((s, e) => s + e.amount, 0));
                 total += bal;
-                html += `<tr><td>${cat.name}</td><td style="text-align:right; color:${bal < 0 ? '#d9534f' : '#28a745'}"><b>${bal.toFixed(2)}</b></td></tr>`;
+                html += `<tr><td>${cat.name}</td><td style="text-align:right; color:${bal < 0 ? 'red' : 'green'}">${bal.toFixed(2)}</td></tr>`;
             });
-            html += `<tr style="border-top:2px solid #333"><td><b>Gesamt</b></td><td style="text-align:right; color:${total < 0 ? '#d9534f' : '#28a745'}"><b>${total.toFixed(2)} CHF</b></td></tr></table>`;
+            html += `<tr style="border-top:1px solid #333; font-weight:bold;"><td>Gesamt</td><td style="text-align:right;">${total.toFixed(2)} CHF</td></tr></table>`;
             html += `<br><button class="secondary" onclick="document.getElementById('statsModal').style.display='none'">Schliessen</button>`;
             document.getElementById('statsContent').innerHTML = html;
             document.getElementById('statsModal').style.display = 'block';
@@ -203,21 +161,13 @@
         function exportData() {
             const a = document.createElement('a');
             a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
-            a.download = `budget_${new Date().toISOString().slice(0,10)}.json`;
-            a.click();
+            a.download = `budget.json`; a.click();
         }
 
         function importData(e) {
-            const file = e.target.files[0];
-            if (!file) return;
             const reader = new FileReader();
-            reader.onload = (ev) => {
-                try {
-                    data = JSON.parse(ev.target.result);
-                    saveData();
-                } catch (err) { alert('Fehler beim Laden.'); }
-            };
-            reader.readAsText(file);
+            reader.onload = (ev) => { data = JSON.parse(ev.target.result); saveData(); };
+            reader.readAsText(e.target.files[0]);
         }
 
         function render() {
@@ -229,52 +179,42 @@
 
                 html += `
                 <div class="card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                        <h3 style="margin:0; font-size:1.1em;">${cat.name}</h3>
-                        <div>
-                            <button class="cat-btn" onclick="moveCategory(${cat.id}, -1)">↑</button>
-                            <button class="cat-btn" onclick="moveCategory(${cat.id}, 1)">↓</button>
-                            <button class="cat-btn danger" onclick="deleteCategory(${cat.id})">✕</button>
+                    <div class="cat-header">
+                        <div class="cat-title">${cat.name}</div>
+                        <div class="cat-stats">
+                            <span style="font-weight:bold; color:${rest < 0 ? 'red' : 'green'};">${rest.toFixed(2)}</span>
+                            <span style="color:#888; font-size:0.8em;">(Σ ${total.toFixed(0)})</span>
+                            <div>
+                                <button class="cat-btn" onclick="moveCategory(${cat.id}, -1)">↑</button>
+                                <button class="cat-btn" onclick="moveCategory(${cat.id}, 1)">↓</button>
+                                <button class="cat-btn" style="color:red" onclick="deleteCategory(${cat.id})">✕</button>
+                            </div>
                         </div>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:baseline;">
-                        <span style="font-size:1.1em; font-weight:bold; color:${rest < 0 ? 'red' : 'green'};">${rest.toFixed(2)} CHF</span>
-                        <span style="font-size:0.75em; color:#777;">Konto: ${total.toFixed(2)}</span>
+                    <div class="flex" style="margin-top:4px;">
+                        <input type="number" step="any" id="amt_${cat.id}" placeholder="CHF" style="flex:0.8;">
+                        <input type="text" id="note_${cat.id}" placeholder="Notiz" style="flex:1.2;">
+                        <button class="primary action-btn" style="width:35px;" onclick="addExpense(${cat.id})">OK</button>
                     </div>
-                    <div class="flex flex-mobile-row" style="margin-top:8px;">
-                        <input type="number" step="any" id="amt_${cat.id}" placeholder="Betrag" style="flex:0.7;">
-                        <input type="text" id="note_${cat.id}" placeholder="Notiz" style="flex:1.3;">
-                        <button class="primary action-btn" style="width:40px;" onclick="addExpense(${cat.id})">OK</button>
-                    </div>
-                    
                     <details>
-                        <summary>Zahlungen (${cat.expenses.length})</summary>
+                        <summary>Historie (${cat.expenses.length})</summary>
                         <div class="table-scroll">
                             <table>
-                                <colgroup><col style="width:45px;"><col style="width:60px;"><col><col style="width:85px;"></colgroup>`;
-
-                // Alle Ausgaben anzeigen, nicht mehr nur slice(0,5)
-                [...cat.expenses].reverse().forEach(e => {
-                    html += `<tr>
-                        <td>${e.date}</td>
-                        <td><b>${e.amount}</b></td>
-                        <td style="color:#666; font-style:italic;">${e.note}</td>
-                        <td style="text-align:right">
-                            <button class="secondary action-btn" onclick="editDate(${cat.id}, ${e.id})">📅</button>
-                            <button class="secondary action-btn" onclick="editExpense(${cat.id}, ${e.id})">✏️</button>
-                            <button class="danger action-btn" onclick="deleteExpense(${cat.id}, ${e.id})">✕</button>
-                        </td>
-                    </tr>`;
-                });
-
-                html += `           </table>
+                                <colgroup><col style="width:40px;"><col style="width:50px;"><col><col style="width:30px;"></colgroup>
+                                ${[...cat.expenses].reverse().map(e => `
+                                    <tr>
+                                        <td>${e.date}</td>
+                                        <td><b>${e.amount}</b></td>
+                                        <td style="color:#666;">${e.note}</td>
+                                        <td style="text-align:right"><button class="danger action-btn" onclick="deleteExpense(${cat.id}, ${e.id})">✕</button></td>
+                                    </tr>`).join('')}
+                            </table>
                         </div>
                     </details>
                 </div>`;
             });
             document.getElementById('app').innerHTML = html;
         }
-
         render();
     </script>
 </body>
