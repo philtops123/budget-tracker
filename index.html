@@ -4,62 +4,72 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    <!-- PWA für iPhone Home-Bildschirm -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Budget Tracker">
+    <meta name="apple-mobile-web-app-title" content="Budget">
     <meta name="theme-color" content="#007bff">
 
     <title>Budget Tracker</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 15px; max-width: 600px; margin: auto; background: #f4f4f9; }
-        .card { background: white; border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        input, button { margin: 5px 0; padding: 10px; width: 100%; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; }
+        body { font-family: -apple-system, sans-serif; padding: 10px; max-width: 600px; margin: auto; background: #f4f4f9; color: #333; }
+        h2 { margin: 10px 0; font-size: 1.4em; }
+        .card { background: white; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        input, button { margin: 4px 0; padding: 8px; width: 100%; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; font-size: 15px; }
         button { cursor: pointer; font-weight: bold; border: none; }
-        .flex { display: flex; gap: 10px; }
+        
+        /* Flexbox Optimierung */
+        .flex { display: flex; gap: 5px; align-items: center; }
         .flex > * { flex: 1; }
+        
         .danger { background: #ff4d4d; color: white; }
         .success { background: #4caf50; color: white; }
         .primary { background: #007bff; color: white; }
         .secondary { background: #6c757d; color: white; }
-        .action-btn { padding: 6px; margin: 0 2px; width: auto; font-size: 1em; }
-        .cat-btn { padding: 4px 8px; width: auto; background: #eee; color: #333; margin-left: 4px; font-size: 0.8em; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; font-size: 0.9em; }
-        #statsModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; padding: 15px; box-sizing: border-box; }
-        .modal-content { background: white; padding: 20px; border-radius: 8px; max-width: 500px; margin: 15% auto; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        
+        .action-btn { padding: 4px; margin: 0 1px; width: auto; font-size: 0.9em; }
+        .cat-btn { padding: 2px 6px; width: auto; background: #eee; color: #333; margin-left: 2px; font-size: 0.8em; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; table-layout: fixed; }
+        th, td { border-bottom: 1px solid #eee; padding: 6px 2px; text-align: left; font-size: 0.85em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        /* Statistik Modal Anpassung für iPhone */
+        #statsModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; }
+        .modal-content { background: white; padding: 15px; border-radius: 12px; width: 90%; max-width: 400px; margin: 10% auto; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .stats-table { table-layout: auto; }
+        .stats-table td { white-space: normal; }
+
         @media (max-width: 600px) {
-            .flex { flex-direction: column; gap: 0; }
-            .table-wrapper { overflow-x: auto; }
-            table { min-width: 400px; }
+            .flex-mobile-row { display: flex !important; flex-direction: row !important; gap: 5px; }
+            .flex-mobile-row > input { margin: 0; }
         }
-        .tiny-reset { background: transparent; border: 1px solid #fcc; color: #ff4d4d; font-size: 0.7em; padding: 3px 6px; width: auto; margin: 40px auto; display: block; }
     </style>
 </head>
 <body>
     <h2>💰 Budget Tracker</h2>
 
-    <div class="card flex" style="background: #e9ecef;">
-        <button class="primary" onclick="showStats()">📊 Jahres-Statistik</button>
-        <button class="danger" onclick="resetMonth()">Neuer Monat (Reset)</button>
+    <div class="card flex">
+        <button class="primary" onclick="showStats()">📊 Statistik</button>
+        <button class="danger" onclick="resetMonth()">Monats-Reset</button>
     </div>
-    <div class="flex" style="margin-bottom: 15px;">
-        <button class="secondary" onclick="exportData()">💾 Backup</button>
+    
+    <div class="flex" style="margin-bottom: 10px;">
+        <button class="secondary" style="font-size: 0.8em;" onclick="exportData()">💾 Backup</button>
         <input type="file" id="importFile" style="display:none" onchange="importData(event)">
-        <button class="secondary" onclick="document.getElementById('importFile').click()">📂 Laden</button>
+        <button class="secondary" style="font-size: 0.8em;" onclick="document.getElementById('importFile').click()">📂 Laden</button>
     </div>
 
     <div id="statsModal"><div class="modal-content" id="statsContent"></div></div>
+    
     <div id="app"></div>
 
-    <div class="card" style="border: 2px dashed #ccc;">
-        <h3>➕ Neue Kategorie</h3>
-        <input type="text" id="newCatName" placeholder="Kategorie Name">
-        <input type="number" step="any" id="newCatBudget" placeholder="Budget in CHF">
+    <div class="card" style="border: 2px dashed #ccc; background: #fafafa;">
+        <h3 style="margin:0 0 8px 0; font-size: 1em;">➕ Neue Kategorie</h3>
+        <div class="flex">
+            <input type="text" id="newCatName" placeholder="Name">
+            <input type="number" step="any" id="newCatBudget" placeholder="CHF">
+        </div>
         <button class="success" onclick="addCategory()">Hinzufügen</button>
     </div>
-
-    <button class="tiny-reset" onclick="totalReset()">⚠️ Total-Reset</button>
 
     <script>
         let data = [];
@@ -67,16 +77,10 @@
         try {
             const saved = localStorage.getItem('budgetData');
             if (saved) data = JSON.parse(saved);
-        } catch (e) {
-            console.warn('LocalStorage nicht verfügbar (privater Modus?).');
-        }
+        } catch (e) { console.warn('LocalStorage nicht verfügbar.'); }
 
         function saveData() {
-            try {
-                localStorage.setItem('budgetData', JSON.stringify(data));
-            } catch (e) {
-                alert('Speichern nicht möglich (Speicher voll oder privater Modus).');
-            }
+            localStorage.setItem('budgetData', JSON.stringify(data));
             render();
         }
 
@@ -92,11 +96,9 @@
         }
 
         function deleteCategory(id) {
-            if (confirm('Kategorie wirklich löschen?')) {
-                if (confirm('Sicher? Alle Ausgaben gehen unwiderruflich verloren.')) {
-                    data = data.filter(c => c.id !== id);
-                    saveData();
-                }
+            if (confirm('Kategorie und alle Ausgaben wirklich löschen?')) {
+                data = data.filter(c => c.id !== id);
+                saveData();
             }
         }
 
@@ -117,7 +119,7 @@
                 const cat = data.find(c => c.id === catId);
                 cat.expenses.push({
                     id: Date.now(),
-                    date: new Date().toLocaleDateString('de-CH'),
+                    date: new Date().toLocaleDateString('de-CH').slice(0, 5), // Kürzeres Datum (DD.MM.)
                     amount,
                     note: noteInput.value || '-'
                 });
@@ -141,12 +143,12 @@
 
         function editDate(catId, expId) {
             const exp = data.find(c => c.id === catId).expenses.find(e => e.id === expId);
-            const newDate = prompt('Datum ändern:', exp.date);
+            const newDate = prompt('Datum (DD.MM.):', exp.date);
             if (newDate) { exp.date = newDate; saveData(); }
         }
 
         function deleteExpense(catId, expId) {
-            if (confirm('Ausgabe löschen?')) {
+            if (confirm('Löschen?')) {
                 const cat = data.find(c => c.id === catId);
                 cat.expenses = cat.expenses.filter(e => e.id !== expId);
                 saveData();
@@ -154,7 +156,7 @@
         }
 
         function resetMonth() {
-            if (confirm('Monat abschliessen? Restbeträge gehen in die Bilanz.')) {
+            if (confirm('Monat abschliessen? Reste gehen in die Bilanz.')) {
                 data.forEach(cat => {
                     cat.bilanz += (cat.budget - cat.expenses.reduce((s, e) => s + e.amount, 0));
                     cat.expenses = [];
@@ -163,22 +165,15 @@
             }
         }
 
-        function totalReset() {
-            if (confirm('Wirklich ALLES löschen?') && confirm('Letzte Warnung: Alle Daten werden entfernt!')) {
-                data = [];
-                saveData();
-            }
-        }
-
         function showStats() {
             let total = 0;
-            let html = `<h3>📊 Jahres-Bilanz</h3><div class="table-wrapper"><table>`;
+            let html = `<h3 style="margin-top:0;">📊 Jahres-Bilanz</h3><table class="stats-table">`;
             data.forEach(cat => {
                 const bal = cat.bilanz + (cat.budget - cat.expenses.reduce((s, e) => s + e.amount, 0));
                 total += bal;
-                html += `<tr><td>${cat.name}</td><td style="text-align:right; color:${bal < 0 ? 'red' : 'green'}"><b>${bal.toFixed(2)} CHF</b></td></tr>`;
+                html += `<tr><td>${cat.name}</td><td style="text-align:right; color:${bal < 0 ? '#d9534f' : '#28a745'}"><b>${bal.toFixed(2)}</b></td></tr>`;
             });
-            html += `<tr style="border-top:2px solid #333"><td><b>Gesamt</b></td><td style="text-align:right; color:${total < 0 ? 'red' : 'green'}"><b>${total.toFixed(2)} CHF</b></td></tr></table></div>`;
+            html += `<tr style="border-top:2px solid #333"><td><b>Gesamt</b></td><td style="text-align:right; color:${total < 0 ? '#d9534f' : '#28a745'}"><b>${total.toFixed(2)} CHF</b></td></tr></table>`;
             html += `<br><button class="secondary" onclick="document.getElementById('statsModal').style.display='none'">Schliessen</button>`;
             document.getElementById('statsContent').innerHTML = html;
             document.getElementById('statsModal').style.display = 'block';
@@ -187,7 +182,7 @@
         function exportData() {
             const a = document.createElement('a');
             a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
-            a.download = 'budget_backup.json';
+            a.download = `budget_${new Date().toISOString().slice(0,10)}.json`;
             a.click();
         }
 
@@ -199,15 +194,12 @@
                 try {
                     data = JSON.parse(ev.target.result);
                     saveData();
-                } catch (err) {
-                    alert('Fehler beim Laden der Datei.');
-                }
+                } catch (err) { alert('Fehler beim Laden.'); }
             };
             reader.readAsText(file);
         }
 
         function render() {
-            // Fix: HTML komplett aufbauen, dann einmalig setzen
             let html = '';
             data.forEach((cat) => {
                 const spent = cat.expenses.reduce((s, e) => s + e.amount, 0);
@@ -216,41 +208,41 @@
 
                 html += `
                 <div class="card">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <h3 style="margin:0;">${cat.name}</h3>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                        <h3 style="margin:0; font-size:1.1em;">${cat.name}</h3>
                         <div>
-                            <button class="cat-btn" onclick="moveCategory(${cat.id}, -1)">🔼</button>
-                            <button class="cat-btn" onclick="moveCategory(${cat.id}, 1)">🔽</button>
-                            <button class="cat-btn danger" onclick="deleteCategory(${cat.id})">🗑️</button>
+                            <button class="cat-btn" onclick="moveCategory(${cat.id}, -1)">↑</button>
+                            <button class="cat-btn" onclick="moveCategory(${cat.id}, 1)">↓</button>
+                            <button class="cat-btn danger" onclick="deleteCategory(${cat.id})">✕</button>
                         </div>
                     </div>
-                    <div style="display:flex; justify-content:space-between; margin-top:10px;">
-                        <span style="font-size:1.2em; font-weight:bold; color:${rest < 0 ? 'red' : 'green'};">${rest.toFixed(2)} CHF</span>
-                        <span style="font-size:0.85em; color:#888;">Total: ${total.toFixed(2)} CHF</span>
+                    <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                        <span style="font-size:1.1em; font-weight:bold; color:${rest < 0 ? 'red' : 'green'};">${rest.toFixed(2)} CHF</span>
+                        <span style="font-size:0.75em; color:#777;">Konto: ${total.toFixed(2)}</span>
                     </div>
-                    <div class="flex" style="margin-top:10px;">
-                        <input type="number" step="any" id="amt_${cat.id}" placeholder="Betrag">
-                        <input type="text" id="note_${cat.id}" placeholder="Notiz">
-                        <button class="primary" onclick="addExpense(${cat.id})">OK</button>
+                    <div class="flex flex-mobile-row" style="margin-top:8px;">
+                        <input type="number" step="any" id="amt_${cat.id}" placeholder="Betrag" style="flex:0.7;">
+                        <input type="text" id="note_${cat.id}" placeholder="Notiz" style="flex:1.3;">
+                        <button class="primary action-btn" style="width:40px;" onclick="addExpense(${cat.id})">OK</button>
                     </div>
-                    <div class="table-wrapper"><table>`;
+                    <table>
+                        <colgroup><col style="width:45px;"><col style="width:60px;"><col><col style="width:85px;"></colgroup>`;
 
-                [...cat.expenses].reverse().forEach(e => {
+                [...cat.expenses].reverse().slice(0, 5).forEach(e => {
                     html += `<tr>
                         <td>${e.date}</td>
                         <td><b>${e.amount}</b></td>
-                        <td>${e.note}</td>
+                        <td style="color:#666; font-style:italic;">${e.note}</td>
                         <td style="text-align:right">
                             <button class="secondary action-btn" onclick="editDate(${cat.id}, ${e.id})">📅</button>
                             <button class="secondary action-btn" onclick="editExpense(${cat.id}, ${e.id})">✏️</button>
-                            <button class="danger action-btn" onclick="deleteExpense(${cat.id}, ${e.id})">❌</button>
+                            <button class="danger action-btn" onclick="deleteExpense(${cat.id}, ${e.id})">✕</button>
                         </td>
                     </tr>`;
                 });
 
-                html += `</table></div></div>`;
+                html += `</table></div>`;
             });
-
             document.getElementById('app').innerHTML = html;
         }
 
