@@ -12,15 +12,17 @@
     <title>Budget Tracker</title>
     <style>
         body { font-family: -apple-system, sans-serif; padding: 10px; max-width: 600px; margin: auto; background: #f4f4f9; color: #333; }
-        /* Titel angepasst */
-        h2 { margin: 10px 0; font-size: 1.4em; font-weight: 800; letter-spacing: 0.5px; }
+        
+        /* Titelbereich */
+        .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        h2 { margin: 0; font-size: 1.4em; font-weight: 800; letter-spacing: 0.5px; }
         .title-highlight { color: #007bff; }
         
         .card { background: white; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         input, button { margin: 4px 0; padding: 8px; width: 100%; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; font-size: 15px; }
         button { cursor: pointer; font-weight: bold; border: none; }
         
-        /* Flexbox Optimierung */
+        /* Flexbox */
         .flex { display: flex; gap: 5px; align-items: center; }
         .flex > * { flex: 1; }
         
@@ -31,11 +33,17 @@
         
         .action-btn { padding: 4px; margin: 0 1px; width: auto; font-size: 0.9em; }
         .cat-btn { padding: 2px 6px; width: auto; background: #eee; color: #333; margin-left: 2px; font-size: 0.8em; }
+        .header-btn { width: auto; padding: 6px 10px; font-size: 1em; margin: 0; }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 5px; table-layout: fixed; }
+        /* Tabelle & Scrollbereich */
+        details { margin-top: 8px; font-size: 0.9em; }
+        summary { cursor: pointer; color: #007bff; font-weight: bold; padding: 4px 0; }
+        .table-scroll { max-height: 140px; overflow-y: auto; display: block; border-top: 1px solid #eee; margin-top: 5px; }
+        
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th, td { border-bottom: 1px solid #eee; padding: 6px 2px; text-align: left; font-size: 0.85em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         
-        /* Statistik Modal Anpassung für iPhone */
+        /* Statistik Modal */
         #statsModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; }
         .modal-content { background: white; padding: 15px; border-radius: 12px; width: 90%; max-width: 400px; margin: 10% auto; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         .stats-table { table-layout: auto; }
@@ -48,17 +56,19 @@
     </style>
 </head>
 <body>
-    <h2><span class="title-highlight">Budget</span> Tracker</h2>
+
+    <div class="header-container">
+        <h2><span class="title-highlight">Budget</span> Tracker</h2>
+        <div class="flex" style="gap: 5px; flex: none;">
+            <button class="secondary header-btn" onclick="exportData()" title="Backup">💾</button>
+            <input type="file" id="importFile" style="display:none" onchange="importData(event)">
+            <button class="secondary header-btn" onclick="document.getElementById('importFile').click()" title="Laden">📂</button>
+        </div>
+    </div>
 
     <div class="card flex">
         <button class="primary" onclick="showStats()">📊 Statistik</button>
         <button class="danger" onclick="resetMonth()">Monats-Reset</button>
-    </div>
-    
-    <div class="flex" style="margin-bottom: 10px;">
-        <button class="secondary" style="font-size: 0.8em;" onclick="exportData()">💾 Backup</button>
-        <input type="file" id="importFile" style="display:none" onchange="importData(event)">
-        <button class="secondary" style="font-size: 0.8em;" onclick="document.getElementById('importFile').click()">📂 Laden</button>
     </div>
 
     <div id="statsModal"><div class="modal-content" id="statsContent"></div></div>
@@ -99,7 +109,6 @@
         }
 
         function deleteCategory(id) {
-            // Doppelte Abfrage gegen Verklicken implementiert
             if (confirm('Kategorie und alle Ausgaben wirklich löschen?')) {
                 if (confirm('Bist du ganz sicher? Dies kann nicht rückgängig gemacht werden.')) {
                     data = data.filter(c => c.id !== id);
@@ -124,7 +133,6 @@
             if (amount) {
                 const cat = data.find(c => c.id === catId);
                 
-                // Datum zuverlässig manuell formatieren: DD.MM.
                 const today = new Date();
                 const day = String(today.getDate()).padStart(2, '0');
                 const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -238,10 +246,15 @@
                         <input type="text" id="note_${cat.id}" placeholder="Notiz" style="flex:1.3;">
                         <button class="primary action-btn" style="width:40px;" onclick="addExpense(${cat.id})">OK</button>
                     </div>
-                    <table>
-                        <colgroup><col style="width:45px;"><col style="width:60px;"><col><col style="width:85px;"></colgroup>`;
+                    
+                    <details>
+                        <summary>Zahlungen (${cat.expenses.length})</summary>
+                        <div class="table-scroll">
+                            <table>
+                                <colgroup><col style="width:45px;"><col style="width:60px;"><col><col style="width:85px;"></colgroup>`;
 
-                [...cat.expenses].reverse().slice(0, 5).forEach(e => {
+                // Alle Ausgaben anzeigen, nicht mehr nur slice(0,5)
+                [...cat.expenses].reverse().forEach(e => {
                     html += `<tr>
                         <td>${e.date}</td>
                         <td><b>${e.amount}</b></td>
@@ -254,7 +267,10 @@
                     </tr>`;
                 });
 
-                html += `</table></div>`;
+                html += `           </table>
+                        </div>
+                    </details>
+                </div>`;
             });
             document.getElementById('app').innerHTML = html;
         }
