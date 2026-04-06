@@ -43,6 +43,9 @@
 
         #statsModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; }
         .modal-content { background: white; padding: 15px; border-radius: 12px; width: 90%; max-width: 400px; margin: 10% auto; }
+        
+        /* Neuer Button für Hard Reset */
+        .hard-reset { margin-top: 20px; text-align: center; font-size: 0.8em; color: #888; cursor: pointer; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -67,6 +70,8 @@
             <button class="success" onclick="addCategory()" style="width: 40px;">+</button>
         </div>
     </div>
+
+    <div class="hard-reset" onclick="hardReset()">Alles löschen & Kategorien neu laden</div>
 
     <div id="statsModal"><div class="modal-content" id="statsContent"></div></div>
 
@@ -106,26 +111,44 @@
         ];
 
         let data = [];
-        try {
-            const saved = localStorage.getItem('budgetData');
-            if (saved) {
-                data = JSON.parse(saved);
-                // Kompatibilitäts-Check für alte Daten ohne yearlySpent/yearlyBudget
-                data.forEach(cat => {
-                    if (typeof cat.yearlySpent === 'undefined') cat.yearlySpent = 0;
-                    if (typeof cat.yearlyBudget === 'undefined') cat.yearlyBudget = cat.budget * 12;
-                });
-            } else {
-                data = defaultData;
-                saveData();
+        
+        function loadData() {
+            try {
+                // Suche nach Daten
+                const saved = localStorage.getItem('budgetDataV3');
+                
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    // Sicherstellen, dass nicht versehentlich ein leeres Array geladen wird
+                    if (parsed && parsed.length > 0) {
+                        data = parsed;
+                    } else {
+                        // Wenn Array leer ist, nimm die Standarddaten
+                        data = JSON.parse(JSON.stringify(defaultData)); 
+                    }
+                } else {
+                    // Keine Daten da -> Standarddaten
+                    data = JSON.parse(JSON.stringify(defaultData));
+                }
+            } catch (e) { 
+                data = JSON.parse(JSON.stringify(defaultData)); 
             }
-        } catch (e) { 
-            data = defaultData; 
+            saveData(false); // Speichern ohne erneutes Rendern, das passiert nachher
         }
 
-        function saveData() {
-            localStorage.setItem('budgetData', JSON.stringify(data));
-            render();
+        function saveData(shouldRender = true) {
+            localStorage.setItem('budgetDataV3', JSON.stringify(data));
+            if (shouldRender) render();
+        }
+        
+        function hardReset() {
+            if (confirm('Achtung: Dies löscht alle aktuellen Eingaben und lädt die Standard-Kategorien neu. Wirklich fortfahren?')) {
+                localStorage.removeItem('budgetDataV3');
+                localStorage.removeItem('budgetDataV2');
+                localStorage.removeItem('budgetData');
+                data = JSON.parse(JSON.stringify(defaultData));
+                saveData();
+            }
         }
 
         function addCategory() {
@@ -234,7 +257,6 @@
                 const rest = cat.budget - spent;
                 const total = cat.bilanz + rest;
                 
-                // Berechnung für die Jahresübersicht
                 const actualYearlyBudget = cat.yearlyBudget || (cat.budget * 12);
                 const actualYearlySpent = cat.yearlySpent || 0;
                 const yearlyRest = actualYearlyBudget - actualYearlySpent - spent;
@@ -283,6 +305,9 @@
             });
             document.getElementById('app').innerHTML = html;
         }
+        
+        // Initialisierung starten
+        loadData();
         render();
     </script>
 </body>
