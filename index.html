@@ -37,7 +37,7 @@
 
         .cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 6px; }
         .cat-title { font-size: 0.8em; font-weight: bold; margin: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .cat-stats { font-size: 0.8em; display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+        .cat-stats { font-size: 0.8em; display: flex; gap: 6px; align-items: center; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
         
         #statsModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; }
         .modal-content { background: white; padding: 15px; border-radius: 12px; width: 90%; max-width: 400px; margin: 10% auto; }
@@ -70,6 +70,7 @@
                 <option value="Abos & Kommunikation">Abos</option>
                 <option value="Freizeit">Freizeit</option>
                 <option value="Steuern & Sparen">Sparen</option>
+                <option value="Daueraufträge / Ebill">Daueraufträge</option>
                 <option value="Sonstiges">Sonstiges</option>
             </select>
             <input type="text" id="newCatName" placeholder="Kategorie" style="flex: 1.5;">
@@ -85,7 +86,6 @@
     <script>
         const defaultData = [
             // Wohnen & Haushalt
-            { id: 101, group: "Wohnen & Haushalt", name: "Miete (inkl. Wasser/Strom)", budget: 1300.00, yearlyBudget: 15600.00, yearlySpent: 0, bilanz: 0, expenses: [] },
             { id: 102, group: "Wohnen & Haushalt", name: "Hausrat / Privathaftpflicht", budget: 15.60, yearlyBudget: 187.00, yearlySpent: 0, bilanz: 0, expenses: [] },
             { id: 103, group: "Wohnen & Haushalt", name: "Serafe (Radio/TV)", budget: 27.90, yearlyBudget: 335.00, yearlySpent: 0, bilanz: 0, expenses: [] },
             { id: 104, group: "Wohnen & Haushalt", name: "Abfall und Entsorgung", budget: 40.00, yearlyBudget: 480.00, yearlySpent: 0, bilanz: 0, expenses: [] },
@@ -95,7 +95,6 @@
             { id: 202, group: "Mobilität", name: "Versicherungen (beide)", budget: 68.35, yearlyBudget: 820.00, yearlySpent: 0, bilanz: 0, expenses: [] },
             { id: 203, group: "Mobilität", name: "Strassensteuern (beide)", budget: 80.35, yearlyBudget: 964.00, yearlySpent: 0, bilanz: 0, expenses: [] },
             { id: 204, group: "Mobilität", name: "Service & Unterhalt (beide)", budget: 154.15, yearlyBudget: 1850.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 205, group: "Mobilität", name: "Auto-Rückstellung", budget: 250.00, yearlyBudget: 3000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
             
             // Lebensunterhalt
             { id: 301, group: "Lebensunterhalt", name: "Einkäufe (Nahrung/Haushalt)", budget: 1000.00, yearlyBudget: 12000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
@@ -103,11 +102,6 @@
             { id: 303, group: "Lebensunterhalt", name: "Kleider", budget: 250.00, yearlyBudget: 3000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
             { id: 304, group: "Lebensunterhalt", name: "Krankenkasse", budget: 700.00, yearlyBudget: 8400.00, yearlySpent: 0, bilanz: 0, expenses: [] },
             { id: 305, group: "Lebensunterhalt", name: "Gesundheitskosten (Arzt)", budget: 300.00, yearlyBudget: 3600.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            
-            // Abos & Kommunikation
-            { id: 401, group: "Abos & Kommunikation", name: "Laufende Abos", budget: 32.00, yearlyBudget: 384.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 402, group: "Abos & Kommunikation", name: "Internet", budget: 20.00, yearlyBudget: 240.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 403, group: "Abos & Kommunikation", name: "Handy (Natel 2x)", budget: 22.00, yearlyBudget: 264.00, yearlySpent: 0, bilanz: 0, expenses: [] },
             
             // Freizeit
             { id: 501, group: "Freizeit", name: "Freizeit-Aktivitäten", budget: 300.00, yearlyBudget: 3600.00, yearlySpent: 0, bilanz: 0, expenses: [] },
@@ -119,51 +113,68 @@
             // Steuern & Sparen
             { id: 601, group: "Steuern & Sparen", name: "Steuern", budget: 416.65, yearlyBudget: 5000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
             { id: 602, group: "Steuern & Sparen", name: "Säule 3a", budget: 208.35, yearlyBudget: 2500.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 603, group: "Steuern & Sparen", name: "Sparen Kinder & Invest", budget: 100.00, yearlyBudget: 1200.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 604, group: "Steuern & Sparen", name: "Reservebetrag", budget: 300.00, yearlyBudget: 3600.00, yearlySpent: 0, bilanz: 0, expenses: [] }
+            { id: 604, group: "Steuern & Sparen", name: "Reservebetrag", budget: 300.00, yearlyBudget: 3600.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+
+            // --- NEUE GRUPPE: Daueraufträge / Ebill ---
+            { id: 101, group: "Daueraufträge / Ebill", name: "Miete (inkl. Wasser/Strom)", budget: 1300.00, yearlyBudget: 15600.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 205, group: "Daueraufträge / Ebill", name: "Auto-Rückstellung", budget: 250.00, yearlyBudget: 3000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 401, group: "Daueraufträge / Ebill", name: "Laufende Abos", budget: 32.00, yearlyBudget: 384.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 402, group: "Daueraufträge / Ebill", name: "Internet", budget: 20.00, yearlyBudget: 240.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 403, group: "Daueraufträge / Ebill", name: "Handy (Natel 2x)", budget: 22.00, yearlyBudget: 264.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+            { id: 603, group: "Daueraufträge / Ebill", name: "Sparen Kinder & Invest", budget: 100.00, yearlyBudget: 1200.00, yearlySpent: 0, bilanz: 0, expenses: [] }
         ];
 
-        const groupOrder = ['Lebensunterhalt', 'Wohnen & Haushalt', 'Mobilität', 'Abos & Kommunikation', 'Freizeit', 'Steuern & Sparen', 'Sonstiges'];
+        const groupOrder = ['Lebensunterhalt', 'Wohnen & Haushalt', 'Mobilität', 'Abos & Kommunikation', 'Freizeit', 'Steuern & Sparen', 'Daueraufträge / Ebill', 'Sonstiges'];
         let data = [];
         
         function loadData() {
             try {
-                const saved = localStorage.getItem('budgetDataV3');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if (parsed && parsed.length > 0) {
-                        data = parsed.map(c => {
-                            if (!c.group) {
-                                if(c.id >= 300 && c.id < 400) c.group = 'Lebensunterhalt';
-                                else if(c.id >= 100 && c.id < 200) c.group = 'Wohnen & Haushalt';
-                                else if(c.id >= 200 && c.id < 300) c.group = 'Mobilität';
-                                else if(c.id >= 400 && c.id < 500) c.group = 'Abos & Kommunikation';
-                                else if(c.id >= 500 && c.id < 600) c.group = 'Freizeit';
-                                else if(c.id >= 600 && c.id < 700) c.group = 'Steuern & Sparen';
-                                else c.group = 'Sonstiges';
+                // V4 laden (mit Auto-Abzug Feature)
+                const savedV4 = localStorage.getItem('budgetDataV4');
+                if (savedV4) {
+                    data = JSON.parse(savedV4);
+                } else {
+                    // Migration von V3 auf V4
+                    const savedV3 = localStorage.getItem('budgetDataV3');
+                    if (savedV3) {
+                        data = JSON.parse(savedV3);
+                        const autoCats = ["Miete (inkl. Wasser/Strom)", "Auto-Rückstellung", "Laufende Abos", "Internet", "Handy (Natel 2x)", "Sparen Kinder & Invest"];
+                        
+                        data.forEach(c => {
+                            if (autoCats.includes(c.name) && c.group !== "Daueraufträge / Ebill") {
+                                c.group = "Daueraufträge / Ebill";
+                                // Direkt Auto-Abzug einfügen bei der Migration
+                                if (!c.expenses.some(e => e.isAuto)) {
+                                    const d = new Date();
+                                    c.expenses.push({
+                                        id: Date.now() + Math.floor(Math.random()*1000),
+                                        date: `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`,
+                                        amount: c.budget,
+                                        note: 'Auto-Abzug',
+                                        isAuto: true
+                                    });
+                                }
                             }
-                            return c;
                         });
                     } else {
                         data = JSON.parse(JSON.stringify(defaultData)); 
                     }
-                } else {
-                    data = JSON.parse(JSON.stringify(defaultData));
                 }
             } catch (e) { 
                 data = JSON.parse(JSON.stringify(defaultData)); 
             }
-            saveData(); // <--- Änderung: Ruft nun standardmäßig auch render() auf
+            saveData();
         }
 
         function saveData(shouldRender = true) {
-            localStorage.setItem('budgetDataV3', JSON.stringify(data));
+            localStorage.setItem('budgetDataV4', JSON.stringify(data));
             if (shouldRender) render();
         }
         
         function hardReset() {
             if (confirm('Achtung: Dies löscht alle aktuellen Eingaben und lädt die Standard-Kategorien neu. Wirklich fortfahren?')) {
                 if (confirm('Bist du dir wirklich GANZ sicher? Alle bisherigen Daten gehen unwiderruflich verloren!')) {
+                    localStorage.removeItem('budgetDataV4');
                     localStorage.removeItem('budgetDataV3');
                     localStorage.removeItem('budgetDataV2');
                     localStorage.removeItem('budgetData');
@@ -178,7 +189,7 @@
             const name = document.getElementById('newCatName').value.trim();
             const budget = parseFloat(document.getElementById('newCatBudget').value);
             if (name && budget) {
-                data.push({ 
+                const newCat = { 
                     id: Date.now(), 
                     group,
                     name, 
@@ -187,7 +198,21 @@
                     yearlySpent: 0, 
                     bilanz: 0, 
                     expenses: [] 
-                });
+                };
+
+                // Falls es direkt in Daueraufträge kommt, sofort abbuchen
+                if (group === "Daueraufträge / Ebill") {
+                    const d = new Date();
+                    newCat.expenses.push({
+                        id: Date.now() + 1,
+                        date: `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`,
+                        amount: budget,
+                        note: 'Auto-Abzug',
+                        isAuto: true
+                    });
+                }
+
+                data.push(newCat);
                 document.getElementById('newCatName').value = '';
                 document.getElementById('newCatBudget').value = '';
                 saveData();
@@ -219,6 +244,31 @@
             }
         }
 
+        // Neue Funktion für Gruppen-Wechsel über das Dropdown
+        function changeGroup(id, newGroup) {
+            const cat = data.find(c => c.id === id);
+            const oldGroup = cat.group;
+            cat.group = newGroup;
+
+            if (newGroup === 'Daueraufträge / Ebill' && oldGroup !== 'Daueraufträge / Ebill') {
+                // Auto-Abzug hinzufügen, falls noch keiner existiert
+                if (!cat.expenses.some(e => e.isAuto)) {
+                    const d = new Date();
+                    cat.expenses.push({
+                        id: Date.now(),
+                        date: `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`,
+                        amount: cat.budget,
+                        note: 'Auto-Abzug',
+                        isAuto: true
+                    });
+                }
+            } else if (newGroup !== 'Daueraufträge / Ebill' && oldGroup === 'Daueraufträge / Ebill') {
+                // Auto-Abzüge entfernen, wenn es aus der Gruppe genommen wird
+                cat.expenses = cat.expenses.filter(e => !e.isAuto);
+            }
+            saveData();
+        }
+
         function addExpense(catId) {
             const amtInput = document.getElementById('amt_' + catId);
             const noteInput = document.getElementById('note_' + catId);
@@ -246,12 +296,24 @@
         }
 
         function resetMonth() {
-            if (confirm('Monat abschliessen? Die Ausgaben werden zum Jahrestotal addiert und der Monat geleert.')) {
+            if (confirm('Monat abschliessen? Die Ausgaben werden zum Jahrestotal addiert und der Monat geleert. Daueraufträge werden für den neuen Monat direkt belastet.')) {
+                const d = new Date();
                 data.forEach(cat => {
                     const monthlySpent = cat.expenses.reduce((s, e) => s + e.amount, 0);
                     cat.yearlySpent += monthlySpent;
                     cat.bilanz += (cat.budget - monthlySpent);
                     cat.expenses = [];
+
+                    // Auto-Abzug für die neue Periode
+                    if (cat.group === 'Daueraufträge / Ebill') {
+                        cat.expenses.push({
+                            id: Date.now() + Math.floor(Math.random()*10000),
+                            date: `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`,
+                            amount: cat.budget,
+                            note: 'Auto-Abzug',
+                            isAuto: true
+                        });
+                    }
                 });
                 saveData();
             }
@@ -263,7 +325,6 @@
             
             let html = `<h3 style="margin:0 0 10px 0;">📊 Statistik</h3><div style="max-height: 60vh; overflow-y: auto;">`;
 
-            // Hilfsfunktion zum Rendern einer Gruppe
             const renderGroup = (groupName, cats) => {
                 if (cats.length === 0) return '';
                 let groupHtml = `<div class="group-title">${groupName}</div>`;
@@ -290,13 +351,11 @@
                 return groupHtml;
             };
 
-            // Gruppen iterieren (Änderung für gruppierte Statistik)
             groupOrder.forEach(groupName => {
                 const catsInGroup = data.filter(c => (c.group || 'Sonstiges') === groupName);
                 html += renderGroup(groupName, catsInGroup);
             });
 
-            // Weitere/Sonstige Kategorien
             const otherCats = data.filter(c => !groupOrder.includes(c.group || 'Sonstiges'));
             html += renderGroup('Weitere', otherCats);
             
@@ -345,7 +404,11 @@
                                 <div class="cat-stats">
                                     <span style="font-weight:bold; color:${rest < 0 ? 'red' : 'green'};">${rest.toFixed(2)}</span>
                                     <span style="color:#888; font-size:0.8em;">(Total: ${total.toFixed(0)})</span>
-                                    <div>
+                                    
+                                    <div style="display: flex; gap: 2px; align-items: center; margin-top: 4px;">
+                                        <select onchange="changeGroup(${cat.id}, this.value)" style="padding:2px; font-size:0.75em; width:100px;">
+                                            ${groupOrder.map(g => `<option value="${g}" ${cat.group === g ? 'selected' : ''}>${g}</option>`).join('')}
+                                        </select>
                                         <button class="cat-btn" onclick="moveCategory(${cat.id}, -1)">↑</button>
                                         <button class="cat-btn" onclick="moveCategory(${cat.id}, 1)">↓</button>
                                         <button class="cat-btn" style="color:red" onclick="deleteCategory(${cat.id})">✕</button>
@@ -392,7 +455,12 @@
                                 <div class="cat-stats">
                                     <span style="font-weight:bold; color:${rest < 0 ? 'red' : 'green'};">${rest.toFixed(2)}</span>
                                     <span style="color:#888; font-size:0.8em;">(Total: ${total.toFixed(0)})</span>
-                                    <div>
+                                    
+                                    <div style="display: flex; gap: 2px; align-items: center; margin-top: 4px;">
+                                        <select onchange="changeGroup(${cat.id}, this.value)" style="padding:2px; font-size:0.75em; width:100px;">
+                                            ${groupOrder.map(g => `<option value="${g}" ${cat.group === g ? 'selected' : ''}>${g}</option>`).join('')}
+                                            <option value="Sonstiges" ${!groupOrder.includes(cat.group) ? 'selected' : ''}>Sonstiges</option>
+                                        </select>
                                         <button class="cat-btn" onclick="moveCategory(${cat.id}, -1)">↑</button>
                                         <button class="cat-btn" onclick="moveCategory(${cat.id}, 1)">↓</button>
                                         <button class="cat-btn" style="color:red" onclick="deleteCategory(${cat.id})">✕</button>
@@ -405,13 +473,12 @@
                                 <button class="primary action-btn" style="width:35px;" onclick="addExpense(${cat.id})">OK</button>
                             </div>
                         </div>`;
-                    });
+                });
             }
 
             document.getElementById('app').innerHTML = html;
         }
         
-        // Initialisierung starten
         loadData();
     </script>
 </body>
