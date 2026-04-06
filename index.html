@@ -132,7 +132,6 @@
                 if (saved) {
                     const parsed = JSON.parse(saved);
                     if (parsed && parsed.length > 0) {
-                        // Abwärtskompatibilität für alte Daten ohne Gruppe
                         data = parsed.map(c => {
                             if (!c.group) {
                                 if(c.id >= 300 && c.id < 400) c.group = 'Lebensunterhalt';
@@ -154,7 +153,7 @@
             } catch (e) { 
                 data = JSON.parse(JSON.stringify(defaultData)); 
             }
-            saveData(false);
+            saveData(); // <--- Änderung: Ruft nun standardmäßig auch render() auf
         }
 
         function saveData(shouldRender = true) {
@@ -206,7 +205,6 @@
             const cat = data.find(c => c.id === id);
             const groupName = cat.group || 'Sonstiges';
             
-            // Nur innerhalb der gleichen Gruppe verschieben
             const groupItems = data.filter(c => (c.group || 'Sonstiges') === groupName);
             const currentIndex = groupItems.findIndex(c => c.id === id);
             const newIndex = currentIndex + direction;
@@ -264,27 +262,46 @@
             let totalYearlyRest = 0;
             
             let html = `<h3 style="margin:0 0 10px 0;">📊 Statistik</h3><div style="max-height: 60vh; overflow-y: auto;">`;
-            html += `<table style="width:100%; font-size:0.85em; border-collapse: collapse;">`;
-            html += `<tr><th style="text-align:left;">Kategorie</th><th style="text-align:right;">Mt. Bilanz</th><th style="text-align:right;">Jahr Rest</th></tr>`;
 
-            data.forEach(cat => {
-                const spent = cat.expenses.reduce((s, e) => s + e.amount, 0);
-                const bal = cat.bilanz + (cat.budget - spent);
-                totalBilanz += bal;
+            // Hilfsfunktion zum Rendern einer Gruppe
+            const renderGroup = (groupName, cats) => {
+                if (cats.length === 0) return '';
+                let groupHtml = `<div class="group-title">${groupName}</div>`;
+                groupHtml += `<table style="width:100%; font-size:0.85em; border-collapse: collapse; margin-bottom: 10px;">`;
+                groupHtml += `<tr><th style="text-align:left;">Kategorie</th><th style="text-align:right;">Mt. Bilanz</th><th style="text-align:right;">Jahr Rest</th></tr>`;
+                
+                cats.forEach(cat => {
+                    const spent = cat.expenses.reduce((s, e) => s + e.amount, 0);
+                    const bal = cat.bilanz + (cat.budget - spent);
+                    totalBilanz += bal;
 
-                const actualYearlyBudget = cat.yearlyBudget || (cat.budget * 12);
-                const actualYearlySpent = cat.yearlySpent || 0;
-                const yearlyRest = actualYearlyBudget - actualYearlySpent - spent;
-                totalYearlyRest += yearlyRest;
+                    const actualYearlyBudget = cat.yearlyBudget || (cat.budget * 12);
+                    const actualYearlySpent = cat.yearlySpent || 0;
+                    const yearlyRest = actualYearlyBudget - actualYearlySpent - spent;
+                    totalYearlyRest += yearlyRest;
 
-                html += `<tr>
-                            <td style="padding:6px 0; border-bottom:1px solid #eee; white-space:normal; word-break:break-word;">${cat.name}</td>
-                            <td style="padding:6px 0; text-align:right; border-bottom:1px solid #eee; color:${bal < 0 ? 'red' : 'green'}">${bal.toFixed(0)}</td>
-                            <td style="padding:6px 0; text-align:right; border-bottom:1px solid #eee; color:${yearlyRest < 0 ? 'red' : 'green'}">${yearlyRest.toFixed(0)}</td>
-                         </tr>`;
+                    groupHtml += `<tr>
+                                <td style="padding:6px 0; border-bottom:1px solid #eee; white-space:normal; word-break:break-word;">${cat.name}</td>
+                                <td style="padding:6px 0; text-align:right; border-bottom:1px solid #eee; color:${bal < 0 ? 'red' : 'green'}">${bal.toFixed(0)}</td>
+                                <td style="padding:6px 0; text-align:right; border-bottom:1px solid #eee; color:${yearlyRest < 0 ? 'red' : 'green'}">${yearlyRest.toFixed(0)}</td>
+                             </tr>`;
+                });
+                groupHtml += `</table>`;
+                return groupHtml;
+            };
+
+            // Gruppen iterieren (Änderung für gruppierte Statistik)
+            groupOrder.forEach(groupName => {
+                const catsInGroup = data.filter(c => (c.group || 'Sonstiges') === groupName);
+                html += renderGroup(groupName, catsInGroup);
             });
+
+            // Weitere/Sonstige Kategorien
+            const otherCats = data.filter(c => !groupOrder.includes(c.group || 'Sonstiges'));
+            html += renderGroup('Weitere', otherCats);
             
-            html += `<tr style="border-top:2px solid #333; font-weight:bold;">
+            html += `<table style="width:100%; font-size:0.85em; border-collapse: collapse;">
+                     <tr style="border-top:2px solid #333; font-weight:bold;">
                         <td style="padding:6px 0;">Gesamt</td>
                         <td style="text-align:right; padding:6px 0;">${totalBilanz.toFixed(0)}</td>
                         <td style="text-align:right; padding:6px 0;">${totalYearlyRest.toFixed(0)}</td>
@@ -310,7 +327,6 @@
         function render() {
             let html = '';
             
-            // Durch definierte Gruppen iterieren
             groupOrder.forEach(groupName => {
                 const catsInGroup = data.filter(c => (c.group || 'Sonstiges') === groupName);
                 
@@ -362,11 +378,9 @@
                 }
             });
 
-            // Restliche "Sonstige" Kategorien falls welche existieren die nicht im groupOrder sind
             const otherCats = data.filter(c => !groupOrder.includes(c.group || 'Sonstiges'));
             if (otherCats.length > 0) {
                 html += `<div class="group-title">Weitere</div>`;
-                // Gleicher Render-Code wie oben für otherCats...
                 otherCats.forEach((cat) => {
                         const spent = cat.expenses.reduce((s, e) => s + e.amount, 0);
                         const rest = cat.budget - spent;
