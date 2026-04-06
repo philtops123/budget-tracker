@@ -12,7 +12,10 @@
     <title>Budget Tracker</title>
     <style>
         body { font-family: -apple-system, sans-serif; padding: 10px; max-width: 600px; margin: auto; background: #f4f4f9; color: #333; }
-        h2 { margin: 10px 0; font-size: 1.4em; }
+        /* Titel angepasst */
+        h2 { margin: 10px 0; font-size: 1.4em; font-weight: 800; letter-spacing: 0.5px; }
+        .title-highlight { color: #007bff; }
+        
         .card { background: white; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         input, button { margin: 4px 0; padding: 8px; width: 100%; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; font-size: 15px; }
         button { cursor: pointer; font-weight: bold; border: none; }
@@ -45,7 +48,7 @@
     </style>
 </head>
 <body>
-    <h2>💰 Budget Tracker</h2>
+    <h2><span class="title-highlight">Budget</span> Tracker</h2>
 
     <div class="card flex">
         <button class="primary" onclick="showStats()">📊 Statistik</button>
@@ -96,9 +99,12 @@
         }
 
         function deleteCategory(id) {
+            // Doppelte Abfrage gegen Verklicken implementiert
             if (confirm('Kategorie und alle Ausgaben wirklich löschen?')) {
-                data = data.filter(c => c.id !== id);
-                saveData();
+                if (confirm('Bist du ganz sicher? Dies kann nicht rückgängig gemacht werden.')) {
+                    data = data.filter(c => c.id !== id);
+                    saveData();
+                }
             }
         }
 
@@ -117,9 +123,16 @@
             const amount = parseFloat(amountInput.value.replace(',', '.'));
             if (amount) {
                 const cat = data.find(c => c.id === catId);
+                
+                // Datum zuverlässig manuell formatieren: DD.MM.
+                const today = new Date();
+                const day = String(today.getDate()).padStart(2, '0');
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const formattedDate = `${day}.${month}.`;
+
                 cat.expenses.push({
                     id: Date.now(),
-                    date: new Date().toLocaleDateString('de-CH').slice(0, 5), // Kürzeres Datum (DD.MM.)
+                    date: formattedDate,
                     amount,
                     note: noteInput.value || '-'
                 });
