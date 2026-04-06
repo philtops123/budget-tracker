@@ -35,10 +35,10 @@
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th, td { border-bottom: 1px solid #eee; padding: 4px 2px; text-align: left; font-size: 0.8em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        /* Kompakter Modus für Mobile */
         .cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
         .cat-title { font-size: 0.95em; font-weight: bold; margin: 0; flex-shrink: 0; }
         .cat-stats { font-size: 0.85em; display: flex; gap: 8px; align-items: center; }
+        .yearly-stats { font-size: 0.75em; color: #555; background: #f8f9fa; padding: 4px 6px; border-radius: 4px; margin-bottom: 6px; display: flex; justify-content: space-between; border: 1px solid #eee; }
 
         #statsModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; }
         .modal-content { background: white; padding: 15px; border-radius: 12px; width: 90%; max-width: 400px; margin: 10% auto; }
@@ -70,11 +70,47 @@
     <div id="statsModal"><div class="modal-content" id="statsContent"></div></div>
 
     <script>
+        const initialCategories = [
+            { id: 1, name: "Miete (inkl. Wasser/Strom)", budget: 1300.00, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 2, name: "Hausrat / Privathaftpflicht", budget: 15.60, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 3, name: "Serafe (Radio/TV)", budget: 27.90, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 4, name: "Abfall und Entsorgung", budget: 40.00, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 5, name: "Treibstoff (beide Autos)", budget: 141.65, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 6, name: "Versicherungen (beide)", budget: 68.35, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 7, name: "Strassensteuern (beide)", budget: 80.35, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 8, name: "Service & Unterhalt (beide)", budget: 154.15, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 9, name: "Auto-Rückstellung", budget: 250.00, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 10, name: "Einkäufe (Nahrung/Haushalt)", budget: 1000.00, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 11, name: "Essen auswärts / Bestellt", budget: 250.00, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 12, name: "Kleider", budget: 250.00, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 13, name: "Krankenkasse", budget: 700.00, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 14, name: "Gesundheitskosten (Arzt)", budget: 300.00, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 15, name: "Laufende Abos", budget: 32.00, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 16, name: "Internet", budget: 20.00, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 17, name: "Handy (Natel 2x)", budget: 22.00, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 18, name: "Freizeit-Aktivitäten", budget: 300.00, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 19, name: "Training (Lina & Lara)", budget: 40.50, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 20, name: "Schule / Lager / Geschenk", budget: 30.00, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 21, name: "Geschenke (allgemein)", budget: 75.00, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 22, name: "Ferien", budget: 333.35, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 23, name: "Steuern", budget: 416.65, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 24, name: "Säule 3a", budget: 208.35, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 25, name: "Sparen Kinder & Invest", budget: 100.00, bilanz: 0, yearlySpent: 0, expenses: [] },
+            { id: 26, name: "Reservebetrag", budget: 300.00, bilanz: 0, yearlySpent: 0, expenses: [] }
+        ];
+
         let data = [];
         try {
             const saved = localStorage.getItem('budgetData');
-            if (saved) data = JSON.parse(saved);
-        } catch (e) { console.warn('Storage Error'); }
+            if (saved) {
+                data = JSON.parse(saved);
+            } else {
+                data = initialCategories;
+                saveData();
+            }
+        } catch (e) { 
+            data = initialCategories; 
+        }
 
         function saveData() {
             localStorage.setItem('budgetData', JSON.stringify(data));
@@ -85,7 +121,7 @@
             const name = document.getElementById('newCatName').value.trim();
             const budget = parseFloat(document.getElementById('newCatBudget').value);
             if (name && budget) {
-                data.push({ id: Date.now(), name, budget, bilanz: 0, expenses: [] });
+                data.push({ id: Date.now(), name, budget, bilanz: 0, yearlySpent: 0, expenses: [] });
                 document.getElementById('newCatName').value = '';
                 document.getElementById('newCatBudget').value = '';
                 saveData();
@@ -137,7 +173,9 @@
         function resetMonth() {
             if (confirm('Monat abschliessen?')) {
                 data.forEach(cat => {
-                    cat.bilanz += (cat.budget - cat.expenses.reduce((s, e) => s + e.amount, 0));
+                    const monthSpent = cat.expenses.reduce((s, e) => s + e.amount, 0);
+                    cat.bilanz += (cat.budget - monthSpent);
+                    cat.yearlySpent = (cat.yearlySpent || 0) + monthSpent;
                     cat.expenses = [];
                 });
                 saveData();
@@ -176,6 +214,10 @@
                 const spent = cat.expenses.reduce((s, e) => s + e.amount, 0);
                 const rest = cat.budget - spent;
                 const total = cat.bilanz + rest;
+                
+                const yearlyBudget = cat.budget * 12;
+                const yearlySpentTotal = (cat.yearlySpent || 0) + spent;
+                const yearlyRest = yearlyBudget - yearlySpentTotal;
 
                 html += `
                 <div class="card">
@@ -183,7 +225,7 @@
                         <div class="cat-title">${cat.name}</div>
                         <div class="cat-stats">
                             <span style="font-weight:bold; color:${rest < 0 ? 'red' : 'green'};">${rest.toFixed(2)}</span>
-                            <span style="color:#888; font-size:0.8em;">(Σ ${total.toFixed(0)})</span>
+                            <span style="color:#888; font-size:0.8em;">(Σ CHF ${total.toFixed(2)})</span>
                             <div>
                                 <button class="cat-btn" onclick="moveCategory(${cat.id}, -1)">↑</button>
                                 <button class="cat-btn" onclick="moveCategory(${cat.id}, 1)">↓</button>
@@ -191,6 +233,12 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <div class="yearly-stats">
+                        <span>Jahr: <b>CHF ${yearlyBudget.toFixed(2)}</b></span>
+                        <span>Rest: <b style="color:${yearlyRest < 0 ? 'red' : '#333'}">CHF ${yearlyRest.toFixed(2)}</b></span>
+                    </div>
+
                     <div class="flex" style="margin-top:4px;">
                         <input type="number" step="any" id="amt_${cat.id}" placeholder="CHF" style="flex:0.8;">
                         <input type="text" id="note_${cat.id}" placeholder="Notiz" style="flex:1.2;">
