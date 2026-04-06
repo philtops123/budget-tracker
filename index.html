@@ -25,7 +25,7 @@
         .secondary { background: #6c757d; color: white; }
         
         .action-btn { padding: 4px; width: auto; font-size: 0.85em; }
-        .cat-btn { padding: 2px 5px; width: auto; background: #eee; color: #333; font-size: 0.75em; margin-left: 1px; }
+        .cat-btn { padding: 4px 6px; width: auto; background: #eee; color: #333; font-size: 0.85em; margin-left: 2px; border-radius: 4px; }
         .header-btn { width: auto; padding: 4px 8px; font-size: 0.9em; }
         
         details { margin-top: 4px; font-size: 0.85em; border-top: 1px solid #f0f0f0; }
@@ -39,6 +39,8 @@
         .cat-title { font-size: 0.8em; font-weight: bold; margin: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .cat-stats { font-size: 0.8em; display: flex; gap: 6px; align-items: center; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
         
+        .cat-settings { display: none; gap: 4px; margin-top: 6px; padding: 6px; background: #f8f9fa; border: 1px solid #eee; border-radius: 4px; align-items: center; flex-wrap: wrap; }
+        
         #statsModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; }
         .modal-content { background: white; padding: 15px; border-radius: 12px; width: 90%; max-width: 400px; margin: 10% auto; }
         
@@ -51,11 +53,12 @@
     <div class="header-container">
         <h2><span class="title-highlight">Budget</span></h2>
         <div class="flex" style="gap: 4px; flex: none;">
-            <button class="primary header-btn" onclick="showStats()">📊</button>
-            <button class="danger header-btn" onclick="resetMonth()">⌛</button>
-            <button class="secondary header-btn" onclick="exportData()">💾</button>
+            <button class="primary header-btn" onclick="showHistory()" title="Historie">🗓️</button>
+            <button class="primary header-btn" onclick="showStats()" title="Statistik">📊</button>
+            <button class="danger header-btn" onclick="resetMonth()" title="Monat abschließen">⌛</button>
+            <button class="secondary header-btn" onclick="exportData()" title="Export">💾</button>
             <input type="file" id="importFile" style="display:none" onchange="importData(event)">
-            <button class="secondary header-btn" onclick="document.getElementById('importFile').click()">📂</button>
+            <button class="secondary header-btn" onclick="document.getElementById('importFile').click()" title="Import">📂</button>
         </div>
     </div>
 
@@ -115,7 +118,7 @@
             { id: 602, group: "Steuern & Sparen", name: "Säule 3a", budget: 208.35, yearlyBudget: 2500.00, yearlySpent: 0, bilanz: 0, expenses: [] },
             { id: 604, group: "Steuern & Sparen", name: "Reservebetrag", budget: 300.00, yearlyBudget: 3600.00, yearlySpent: 0, bilanz: 0, expenses: [] },
 
-            // --- NEUE GRUPPE: Daueraufträge / Ebill ---
+            // Daueraufträge / Ebill
             { id: 101, group: "Daueraufträge / Ebill", name: "Miete (inkl. Wasser/Strom)", budget: 1300.00, yearlyBudget: 15600.00, yearlySpent: 0, bilanz: 0, expenses: [] },
             { id: 205, group: "Daueraufträge / Ebill", name: "Auto-Rückstellung", budget: 250.00, yearlyBudget: 3000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
             { id: 401, group: "Daueraufträge / Ebill", name: "Laufende Abos", budget: 32.00, yearlyBudget: 384.00, yearlySpent: 0, bilanz: 0, expenses: [] },
@@ -126,48 +129,31 @@
 
         const groupOrder = ['Lebensunterhalt', 'Wohnen & Haushalt', 'Mobilität', 'Abos & Kommunikation', 'Freizeit', 'Steuern & Sparen', 'Daueraufträge / Ebill', 'Sonstiges'];
         let data = [];
+        let historyData = [];
         
         function loadData() {
             try {
-                // V4 laden (mit Auto-Abzug Feature)
                 const savedV4 = localStorage.getItem('budgetDataV4');
                 if (savedV4) {
                     data = JSON.parse(savedV4);
                 } else {
-                    // Migration von V3 auf V4
-                    const savedV3 = localStorage.getItem('budgetDataV3');
-                    if (savedV3) {
-                        data = JSON.parse(savedV3);
-                        const autoCats = ["Miete (inkl. Wasser/Strom)", "Auto-Rückstellung", "Laufende Abos", "Internet", "Handy (Natel 2x)", "Sparen Kinder & Invest"];
-                        
-                        data.forEach(c => {
-                            if (autoCats.includes(c.name) && c.group !== "Daueraufträge / Ebill") {
-                                c.group = "Daueraufträge / Ebill";
-                                // Direkt Auto-Abzug einfügen bei der Migration
-                                if (!c.expenses.some(e => e.isAuto)) {
-                                    const d = new Date();
-                                    c.expenses.push({
-                                        id: Date.now() + Math.floor(Math.random()*1000),
-                                        date: `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`,
-                                        amount: c.budget,
-                                        note: 'Auto-Abzug',
-                                        isAuto: true
-                                    });
-                                }
-                            }
-                        });
-                    } else {
-                        data = JSON.parse(JSON.stringify(defaultData)); 
-                    }
+                    data = JSON.parse(JSON.stringify(defaultData)); 
+                }
+                
+                const savedHistory = localStorage.getItem('budgetHistory');
+                if (savedHistory) {
+                    historyData = JSON.parse(savedHistory);
                 }
             } catch (e) { 
                 data = JSON.parse(JSON.stringify(defaultData)); 
+                historyData = [];
             }
             saveData();
         }
 
         function saveData(shouldRender = true) {
             localStorage.setItem('budgetDataV4', JSON.stringify(data));
+            localStorage.setItem('budgetHistory', JSON.stringify(historyData));
             if (shouldRender) render();
         }
         
@@ -175,10 +161,9 @@
             if (confirm('Achtung: Dies löscht alle aktuellen Eingaben und lädt die Standard-Kategorien neu. Wirklich fortfahren?')) {
                 if (confirm('Bist du dir wirklich GANZ sicher? Alle bisherigen Daten gehen unwiderruflich verloren!')) {
                     localStorage.removeItem('budgetDataV4');
-                    localStorage.removeItem('budgetDataV3');
-                    localStorage.removeItem('budgetDataV2');
-                    localStorage.removeItem('budgetData');
+                    localStorage.removeItem('budgetHistory');
                     data = JSON.parse(JSON.stringify(defaultData));
+                    historyData = [];
                     saveData();
                 }
             }
@@ -200,7 +185,6 @@
                     expenses: [] 
                 };
 
-                // Falls es direkt in Daueraufträge kommt, sofort abbuchen
                 if (group === "Daueraufträge / Ebill") {
                     const d = new Date();
                     newCat.expenses.push({
@@ -217,6 +201,11 @@
                 document.getElementById('newCatBudget').value = '';
                 saveData();
             }
+        }
+
+        function toggleSettings(id) {
+            const el = document.getElementById('settings_' + id);
+            el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'flex' : 'none';
         }
 
         function deleteCategory(id) {
@@ -244,14 +233,12 @@
             }
         }
 
-        // Neue Funktion für Gruppen-Wechsel über das Dropdown
         function changeGroup(id, newGroup) {
             const cat = data.find(c => c.id === id);
             const oldGroup = cat.group;
             cat.group = newGroup;
 
             if (newGroup === 'Daueraufträge / Ebill' && oldGroup !== 'Daueraufträge / Ebill') {
-                // Auto-Abzug hinzufügen, falls noch keiner existiert
                 if (!cat.expenses.some(e => e.isAuto)) {
                     const d = new Date();
                     cat.expenses.push({
@@ -263,7 +250,6 @@
                     });
                 }
             } else if (newGroup !== 'Daueraufträge / Ebill' && oldGroup === 'Daueraufträge / Ebill') {
-                // Auto-Abzüge entfernen, wenn es aus der Gruppe genommen wird
                 cat.expenses = cat.expenses.filter(e => !e.isAuto);
             }
             saveData();
@@ -295,16 +281,48 @@
             }
         }
 
+        function getMonthNameFromData() {
+            let sampleDate = null;
+            for (let cat of data) {
+                for (let exp of cat.expenses) {
+                    if (exp.date) { sampleDate = exp.date; break; }
+                }
+                if (sampleDate) break;
+            }
+
+            const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+            let year = new Date().getFullYear();
+            
+            if (sampleDate) {
+                const parts = sampleDate.split('.');
+                if (parts.length >= 2) {
+                    const mIndex = parseInt(parts[1], 10) - 1;
+                    if (mIndex >= 0 && mIndex < 12) return months[mIndex] + " " + year;
+                }
+            }
+            return months[new Date().getMonth()] + " " + year;
+        }
+
         function resetMonth() {
-            if (confirm('Monat abschliessen? Die Ausgaben werden zum Jahrestotal addiert und der Monat geleert. Daueraufträge werden für den neuen Monat direkt belastet.')) {
+            if (confirm('Monat abschliessen? Die Ausgaben werden zum Jahrestotal addiert und der Monat für die Historie gespeichert.')) {
                 const d = new Date();
+                
+                // Historie-Snapshot erstellen
+                const snapshot = {
+                    id: Date.now(),
+                    monthName: getMonthNameFromData(),
+                    totalSpent: 0,
+                    categories: JSON.parse(JSON.stringify(data))
+                };
+                
                 data.forEach(cat => {
                     const monthlySpent = cat.expenses.reduce((s, e) => s + e.amount, 0);
+                    snapshot.totalSpent += monthlySpent;
+                    
                     cat.yearlySpent += monthlySpent;
                     cat.bilanz += (cat.budget - monthlySpent);
                     cat.expenses = [];
 
-                    // Auto-Abzug für die neue Periode
                     if (cat.group === 'Daueraufträge / Ebill') {
                         cat.expenses.push({
                             id: Date.now() + Math.floor(Math.random()*10000),
@@ -315,8 +333,40 @@
                         });
                     }
                 });
+
+                historyData.push(snapshot);
                 saveData();
             }
+        }
+
+        function showHistory() {
+            if (historyData.length === 0) {
+                alert("Noch keine abgeschlossenen Monate vorhanden.");
+                return;
+            }
+            
+            let html = `<h3 style="margin:0 0 10px 0;">🗓️ Historie</h3><div style="max-height: 60vh; overflow-y: auto;">`;
+            
+            [...historyData].reverse().forEach(h => {
+                html += `<details style="margin-bottom:8px; background:#f9f9f9; padding:8px; border-radius:6px; border:1px solid #ddd;">
+                            <summary style="font-weight:bold; color:#333;">${h.monthName} <span style="float:right; color:#007bff;">${h.totalSpent.toFixed(2)} CHF</span></summary>
+                            <table style="width:100%; font-size:0.85em; margin-top:8px;">`;
+                h.categories.forEach(c => {
+                    const spent = c.expenses.reduce((s,e) => s + e.amount, 0);
+                    if (spent > 0) {
+                        html += `<tr>
+                                    <td style="padding:4px 0; border-bottom:1px solid #eee;">${c.name}</td>
+                                    <td style="text-align:right; padding:4px 0; border-bottom:1px solid #eee;">${spent.toFixed(2)}</td>
+                                 </tr>`;
+                    }
+                });
+                html += `</table></details>`;
+            });
+
+            html += `</div><br><button class="secondary" onclick="document.getElementById('statsModal').style.display='none'">Schliessen</button>`;
+            
+            document.getElementById('statsContent').innerHTML = html;
+            document.getElementById('statsModal').style.display = 'block';
         }
 
         function showStats() {
@@ -372,15 +422,79 @@
         }
 
         function exportData() {
+            const exportObj = { data, historyData };
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+            a.href = URL.createObjectURL(new Blob([JSON.stringify(exportObj)], { type: 'application/json' }));
             a.download = `budget.json`; a.click();
         }
 
         function importData(e) {
             const reader = new FileReader();
-            reader.onload = (ev) => { data = JSON.parse(ev.target.result); saveData(); };
+            reader.onload = (ev) => { 
+                try {
+                    const imported = JSON.parse(ev.target.result);
+                    if (imported.data && imported.historyData) {
+                        data = imported.data;
+                        historyData = imported.historyData;
+                    } else {
+                        // Fallback für alte Exporte ohne Historie
+                        data = imported; 
+                    }
+                    saveData(); 
+                } catch(err) {
+                    alert("Fehler beim Importieren der Datei.");
+                }
+            };
             reader.readAsText(e.target.files[0]);
+        }
+
+        function renderCategoryHTML(cat) {
+            const spent = cat.expenses.reduce((s, e) => s + e.amount, 0);
+            const rest = cat.budget - spent;
+            const total = cat.bilanz + rest;
+            
+            return `
+            <div class="card">
+                <div class="cat-header">
+                    <div class="cat-title">${cat.name}</div>
+                    <div class="cat-stats">
+                        <span style="font-weight:bold; color:${rest < 0 ? 'red' : 'green'};">${rest.toFixed(2)}</span>
+                        <span style="color:#888; font-size:0.8em;">(Total: ${total.toFixed(0)})</span>
+                        <button class="cat-btn" onclick="toggleSettings(${cat.id})" title="Einstellungen">⚙️</button>
+                    </div>
+                </div>
+                
+                <div id="settings_${cat.id}" class="cat-settings">
+                    <select onchange="changeGroup(${cat.id}, this.value)" style="padding:2px; font-size:0.75em; width:120px; flex: 1;">
+                        ${groupOrder.map(g => `<option value="${g}" ${cat.group === g ? 'selected' : ''}>${g}</option>`).join('')}
+                        ${!groupOrder.includes(cat.group) ? `<option value="Sonstiges" selected>Sonstiges</option>` : ''}
+                    </select>
+                    <button class="cat-btn" onclick="moveCategory(${cat.id}, -1)">↑</button>
+                    <button class="cat-btn" onclick="moveCategory(${cat.id}, 1)">↓</button>
+                    <button class="cat-btn" style="color:red" onclick="deleteCategory(${cat.id})">✕ Löschen</button>
+                </div>
+                
+                <div class="flex" style="margin-top:4px;">
+                    <input type="number" step="any" id="amt_${cat.id}" placeholder="CHF" style="flex:0.8;">
+                    <input type="text" id="note_${cat.id}" placeholder="Notiz" style="flex:1.2;">
+                    <button class="primary action-btn" style="width:35px;" onclick="addExpense(${cat.id})">OK</button>
+                </div>
+                <details>
+                    <summary>Historie (${cat.expenses.length})</summary>
+                    <div class="table-scroll">
+                        <table>
+                            <colgroup><col style="width:40px;"><col style="width:50px;"><col><col style="width:30px;"></colgroup>
+                            ${[...cat.expenses].reverse().map(e => `
+                                <tr>
+                                    <td>${e.date}</td>
+                                    <td><b>${e.amount}</b></td>
+                                    <td style="color:#666;">${e.note}</td>
+                                    <td style="text-align:right"><button class="danger action-btn" onclick="deleteExpense(${cat.id}, ${e.id})">✕</button></td>
+                                </tr>`).join('')}
+                        </table>
+                    </div>
+                </details>
+            </div>`;
         }
 
         function render() {
@@ -388,92 +502,16 @@
             
             groupOrder.forEach(groupName => {
                 const catsInGroup = data.filter(c => (c.group || 'Sonstiges') === groupName);
-                
                 if (catsInGroup.length > 0) {
                     html += `<div class="group-title">${groupName}</div>`;
-                    
-                    catsInGroup.forEach((cat) => {
-                        const spent = cat.expenses.reduce((s, e) => s + e.amount, 0);
-                        const rest = cat.budget - spent;
-                        const total = cat.bilanz + rest;
-
-                        html += `
-                        <div class="card">
-                            <div class="cat-header">
-                                <div class="cat-title">${cat.name}</div>
-                                <div class="cat-stats">
-                                    <span style="font-weight:bold; color:${rest < 0 ? 'red' : 'green'};">${rest.toFixed(2)}</span>
-                                    <span style="color:#888; font-size:0.8em;">(Total: ${total.toFixed(0)})</span>
-                                    
-                                    <div style="display: flex; gap: 2px; align-items: center; margin-top: 4px;">
-                                        <select onchange="changeGroup(${cat.id}, this.value)" style="padding:2px; font-size:0.75em; width:100px;">
-                                            ${groupOrder.map(g => `<option value="${g}" ${cat.group === g ? 'selected' : ''}>${g}</option>`).join('')}
-                                        </select>
-                                        <button class="cat-btn" onclick="moveCategory(${cat.id}, -1)">↑</button>
-                                        <button class="cat-btn" onclick="moveCategory(${cat.id}, 1)">↓</button>
-                                        <button class="cat-btn" style="color:red" onclick="deleteCategory(${cat.id})">✕</button>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="flex" style="margin-top:4px;">
-                                <input type="number" step="any" id="amt_${cat.id}" placeholder="CHF" style="flex:0.8;">
-                                <input type="text" id="note_${cat.id}" placeholder="Notiz" style="flex:1.2;">
-                                <button class="primary action-btn" style="width:35px;" onclick="addExpense(${cat.id})">OK</button>
-                            </div>
-                            <details>
-                                <summary>Historie (${cat.expenses.length})</summary>
-                                <div class="table-scroll">
-                                    <table>
-                                        <colgroup><col style="width:40px;"><col style="width:50px;"><col><col style="width:30px;"></colgroup>
-                                        ${[...cat.expenses].reverse().map(e => `
-                                            <tr>
-                                                <td>${e.date}</td>
-                                                <td><b>${e.amount}</b></td>
-                                                <td style="color:#666;">${e.note}</td>
-                                                <td style="text-align:right"><button class="danger action-btn" onclick="deleteExpense(${cat.id}, ${e.id})">✕</button></td>
-                                            </tr>`).join('')}
-                                    </table>
-                                </div>
-                            </details>
-                        </div>`;
-                    });
+                    catsInGroup.forEach(cat => html += renderCategoryHTML(cat));
                 }
             });
 
             const otherCats = data.filter(c => !groupOrder.includes(c.group || 'Sonstiges'));
             if (otherCats.length > 0) {
                 html += `<div class="group-title">Weitere</div>`;
-                otherCats.forEach((cat) => {
-                        const spent = cat.expenses.reduce((s, e) => s + e.amount, 0);
-                        const rest = cat.budget - spent;
-                        const total = cat.bilanz + rest;
-                        html += `
-                        <div class="card">
-                            <div class="cat-header">
-                                <div class="cat-title">${cat.name}</div>
-                                <div class="cat-stats">
-                                    <span style="font-weight:bold; color:${rest < 0 ? 'red' : 'green'};">${rest.toFixed(2)}</span>
-                                    <span style="color:#888; font-size:0.8em;">(Total: ${total.toFixed(0)})</span>
-                                    
-                                    <div style="display: flex; gap: 2px; align-items: center; margin-top: 4px;">
-                                        <select onchange="changeGroup(${cat.id}, this.value)" style="padding:2px; font-size:0.75em; width:100px;">
-                                            ${groupOrder.map(g => `<option value="${g}" ${cat.group === g ? 'selected' : ''}>${g}</option>`).join('')}
-                                            <option value="Sonstiges" ${!groupOrder.includes(cat.group) ? 'selected' : ''}>Sonstiges</option>
-                                        </select>
-                                        <button class="cat-btn" onclick="moveCategory(${cat.id}, -1)">↑</button>
-                                        <button class="cat-btn" onclick="moveCategory(${cat.id}, 1)">↓</button>
-                                        <button class="cat-btn" style="color:red" onclick="deleteCategory(${cat.id})">✕</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="flex" style="margin-top:4px;">
-                                <input type="number" step="any" id="amt_${cat.id}" placeholder="CHF" style="flex:0.8;">
-                                <input type="text" id="note_${cat.id}" placeholder="Notiz" style="flex:1.2;">
-                                <button class="primary action-btn" style="width:35px;" onclick="addExpense(${cat.id})">OK</button>
-                            </div>
-                        </div>`;
-                });
+                otherCats.forEach(cat => html += renderCategoryHTML(cat));
             }
 
             document.getElementById('app').innerHTML = html;
