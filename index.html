@@ -6,67 +6,285 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Budget Tracker</title>
     <style>
-        body { font-family: -apple-system, sans-serif; padding: 8px; max-width: 600px; margin: auto; background: #f4f4f9; color: #333; }
-        
-        .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        h2 { margin: 0; font-size: 1.2em; font-weight: 800; }
-        .title-highlight { color: #007bff; }
-        
-        .card { background: white; border: 1px solid #ddd; padding: 8px; margin-bottom: 6px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        input, button, select { margin: 2px 0; padding: 6px; width: 100%; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; font-size: 14px; }
-        button { cursor: pointer; font-weight: bold; border: none; }
-        
+        :root {
+            --blue: #007bff;
+            --green: #28a745;
+            --red: #dc3545;
+            --yellow: #e0a800;
+            --gray: #6c757d;
+            --bg: #f0f2f7;
+            --card: #ffffff;
+            --border: #e0e4ec;
+            --text: #1a1d23;
+            --muted: #8890a0;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: -apple-system, 'Helvetica Neue', sans-serif;
+            padding: 8px;
+            max-width: 600px;
+            margin: auto;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        /* ── HEADER ── */
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 6px;
+        }
+        h2 { margin: 0; font-size: 1.25em; font-weight: 900; letter-spacing: -0.5px; }
+        .title-highlight { color: var(--blue); }
+
+        /* ── SUMMARY BAR ── */
+        .summary-bar {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 4px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .summary-item { text-align: center; }
+        .summary-item .label { font-size: 0.7em; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+        .summary-item .value { font-size: 1.1em; font-weight: 800; line-height: 1.2; }
+        .summary-progress-wrap { grid-column: 1 / -1; margin-top: 4px; }
+        .summary-progress-bg { background: #e9ecef; border-radius: 99px; height: 6px; overflow: hidden; }
+        .summary-progress-fill {
+            height: 100%;
+            border-radius: 99px;
+            transition: width 0.4s ease;
+            background: var(--green);
+        }
+
+        /* ── CARDS ── */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        input, button, select {
+            margin: 2px 0;
+            padding: 6px 8px;
+            width: 100%;
+            border-radius: 6px;
+            border: 1px solid #ccd0d9;
+            font-size: 14px;
+            background: #fff;
+            color: var(--text);
+        }
+        button {
+            cursor: pointer;
+            font-weight: 700;
+            border: none;
+            transition: opacity 0.15s, transform 0.1s;
+        }
+        button:active { opacity: 0.75; transform: scale(0.97); }
+
         .flex { display: flex; gap: 4px; align-items: center; }
         .flex > * { flex: 1; }
-        
-        .danger { background: #ff4d4d; color: white; }
-        .success { background: #4caf50; color: white; }
-        .primary { background: #007bff; color: white; }
-        .secondary { background: #6c757d; color: white; }
-        
-        .action-btn { padding: 4px; width: auto; font-size: 0.85em; }
-        .cat-btn { padding: 4px 6px; width: auto; background: #eee; color: #333; font-size: 0.85em; margin-left: 2px; border-radius: 4px; }
-        .header-btn { width: auto; padding: 4px 8px; font-size: 0.9em; }
-        
-        details { margin-top: 4px; font-size: 0.85em; border-top: 1px solid #f0f0f0; }
-        summary { cursor: pointer; color: #007bff; padding: 2px 0; }
-        .table-scroll { max-height: 120px; overflow-y: auto; }
-        
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        th, td { border-bottom: 1px solid #eee; padding: 4px 2px; text-align: left; font-size: 0.8em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        .cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 6px; }
-        .cat-title { font-size: 0.8em; font-weight: bold; margin: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .cat-stats { font-size: 0.8em; display: flex; gap: 6px; align-items: center; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
-        
-        .cat-settings { display: none; gap: 4px; margin-top: 6px; padding: 6px; background: #f8f9fa; border: 1px solid #eee; border-radius: 4px; align-items: center; flex-wrap: wrap; }
-        
-        #statsModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; }
-        .modal-content { background: white; padding: 15px; border-radius: 12px; width: 90%; max-width: 400px; margin: 10% auto; }
-        
-        .hard-reset { margin-top: 20px; text-align: center; font-size: 0.8em; color: #888; cursor: pointer; text-decoration: underline; }
-        .group-title { margin: 15px 0 5px 4px; font-weight: bold; color: #555; text-transform: uppercase; font-size: 0.85em; letter-spacing: 0.5px; border-bottom: 2px solid #ddd; padding-bottom: 2px; }
+        .danger  { background: var(--red);   color: white; }
+        .success { background: var(--green); color: white; }
+        .primary { background: var(--blue);  color: white; }
+        .secondary { background: var(--gray); color: white; }
+        .warning { background: var(--yellow); color: white; }
+
+        .action-btn  { padding: 5px 7px; width: auto; font-size: 0.82em; }
+        .cat-btn     { padding: 4px 6px; width: auto; background: #eef0f5; color: #333; font-size: 0.85em; border-radius: 5px; border: 1px solid #dde0ea; }
+        .header-btn  { width: auto; padding: 5px 9px; font-size: 0.9em; border-radius: 7px; }
+
+        /* ── PROGRESS BAR ── */
+        .progress-wrap { margin: 4px 0 2px; }
+        .progress-bg {
+            background: #e9ecef;
+            border-radius: 99px;
+            height: 5px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 99px;
+            transition: width 0.3s ease;
+        }
+
+        /* ── CAT HEADER ── */
+        .cat-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+        .cat-title  { font-size: 0.85em; font-weight: 700; margin: 0; flex: 1; word-break: break-word; }
+        .cat-stats  { font-size: 0.82em; display: flex; gap: 5px; align-items: center; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+        .bilanz-hint { font-size: 0.72em; color: var(--muted); }
+
+        .cat-settings {
+            display: none;
+            gap: 4px;
+            margin-top: 6px;
+            padding: 6px;
+            background: #f6f8fb;
+            border: 1px solid #e4e7ef;
+            border-radius: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* ── EXPENSE INPUT ── */
+        .expense-row { display: flex; gap: 4px; margin-top: 6px; }
+        .expense-row .amt { flex: 0 0 80px; }
+        .expense-row .note { flex: 1; }
+        .expense-row .ok-btn { flex: 0 0 38px; padding: 6px 4px; }
+
+        details { margin-top: 4px; font-size: 0.85em; border-top: 1px solid #f0f2f7; }
+        summary { cursor: pointer; color: var(--blue); padding: 3px 0; user-select: none; }
+        .table-scroll { max-height: 140px; overflow-y: auto; }
+
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th, td { border-bottom: 1px solid #f0f2f7; padding: 4px 2px; text-align: left; font-size: 0.82em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* ── GROUP TITLE ── */
+        .group-title {
+            margin: 14px 0 5px 2px;
+            font-weight: 800;
+            color: var(--blue);
+            text-transform: uppercase;
+            font-size: 0.72em;
+            letter-spacing: 0.8px;
+            border-bottom: 2px solid var(--blue);
+            padding-bottom: 2px;
+            opacity: 0.7;
+        }
+
+        /* ── MODAL ── */
+        #statsModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.55);
+            z-index: 1000;
+            backdrop-filter: blur(2px);
+        }
+        .modal-content {
+            background: white;
+            padding: 16px;
+            border-radius: 14px;
+            width: 92%;
+            max-width: 420px;
+            margin: 8% auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+        }
+
+        /* ── ADD CATEGORY AREA ── */
+        .add-cat-card {
+            background: var(--card);
+            border: 1.5px dashed #c8cdd8;
+            border-radius: 10px;
+            padding: 8px 10px;
+            margin-top: 14px;
+        }
+
+        /* ── TOAST ── */
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: #1a1d23;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 99px;
+            font-size: 0.85em;
+            font-weight: 600;
+            z-index: 9999;
+            transition: transform 0.3s ease;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* ── EXPORT REMINDER ── */
+        #exportReminder {
+            display: none;
+            background: #fff8e1;
+            border: 1px solid #ffe082;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            font-size: 0.82em;
+            color: #7a5c00;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #exportReminder.hidden { display: none !important; }
+
+        .hard-reset {
+            margin-top: 18px;
+            text-align: center;
+            font-size: 0.78em;
+            color: #aaa;
+            cursor: pointer;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
 
     <div class="header-container">
-        <h2><span class="title-highlight">Budget</span></h2>
-        <div class="flex" style="gap: 4px; flex: none;">
-            <button class="primary header-btn" onclick="showHistory()" title="Historie">🗓️</button>
-            <button class="primary header-btn" onclick="showStats()" title="Statistik">📊</button>
-            <button class="danger header-btn" onclick="resetMonth()" title="Monat abschließen">⌛</button>
-            <button class="secondary header-btn" onclick="exportData()" title="Export">💾</button>
+        <h2><span class="title-highlight">Budget</span> Tracker</h2>
+        <div style="display:flex; gap:3px; flex-wrap:nowrap;">
+            <button class="primary header-btn" onclick="showHistory()" title="Monats-Historie">🗓️</button>
+            <button class="primary header-btn" onclick="showStats()" title="Jahresstatistik">📊</button>
+            <button class="warning header-btn" onclick="resetMonth()" title="Monat abschliessen">✅</button>
+            <button class="secondary header-btn" onclick="manualExport()" title="Exportieren & speichern">💾</button>
             <input type="file" id="importFile" style="display:none" onchange="importData(event)">
-            <button class="secondary header-btn" onclick="document.getElementById('importFile').click()" title="Import">📂</button>
+            <button class="secondary header-btn" onclick="document.getElementById('importFile').click()" title="Datei importieren">📂</button>
+        </div>
+    </div>
+
+    <!-- Export Reminder -->
+    <div id="exportReminder" class="hidden">
+        ⚠️ <span id="reminderText"></span>
+        <button class="warning" style="width:auto; padding:3px 10px; font-size:0.85em; margin-left:auto;" onclick="manualExport()">Jetzt sichern</button>
+    </div>
+
+    <!-- Summary Bar -->
+    <div class="summary-bar" id="summaryBar">
+        <div class="summary-item">
+            <div class="label">Budget/Mt.</div>
+            <div class="value" id="sumBudget">—</div>
+        </div>
+        <div class="summary-item">
+            <div class="label">Ausgegeben</div>
+            <div class="value" id="sumSpent" style="color: var(--red)">—</div>
+        </div>
+        <div class="summary-item">
+            <div class="label">Verbleibend</div>
+            <div class="value" id="sumRest">—</div>
+        </div>
+        <div class="summary-progress-wrap">
+            <div class="summary-progress-bg">
+                <div class="summary-progress-fill" id="sumBar" style="width:0%"></div>
+            </div>
         </div>
     </div>
 
     <div id="app"></div>
 
-    <div class="card" style="border: 1px dashed #ccc; background: #fafafa; padding: 6px; margin-top: 15px;">
-        <div class="flex">
-            <select id="newCatGroup" style="flex: 1; padding: 5px; font-size: 12px;">
+    <div class="add-cat-card">
+        <div class="flex" style="flex-wrap: wrap; gap: 4px;">
+            <select id="newCatGroup" style="flex: 1 1 100px; padding: 5px; font-size: 12px;">
                 <option value="Lebensunterhalt">Lebensunterhalt</option>
                 <option value="Wohnen & Haushalt">Haushalt</option>
                 <option value="Mobilität">Mobilität</option>
@@ -76,495 +294,570 @@
                 <option value="Daueraufträge / Ebill">Daueraufträge</option>
                 <option value="Sonstiges">Sonstiges</option>
             </select>
-            <input type="text" id="newCatName" placeholder="Kategorie" style="flex: 1.5;">
-            <input type="number" id="newCatBudget" placeholder="CHF/Mt." style="flex: 1;">
-            <button class="success" onclick="addCategory()" style="width: 40px;">+</button>
+            <input type="text" id="newCatName" placeholder="Kategoriename" style="flex: 2 1 120px;">
+            <input type="number" id="newCatBudget" placeholder="CHF/Mt." style="flex: 1 1 70px;"
+                   onkeydown="if(event.key==='Enter') addCategory()">
+            <button class="success" onclick="addCategory()" style="width: 42px; flex: 0 0 42px;">+</button>
         </div>
     </div>
 
     <div class="hard-reset" onclick="hardReset()">Alles löschen & Kategorien neu laden</div>
 
-    <div id="statsModal"><div class="modal-content" id="statsContent"></div></div>
+    <div id="toast"></div>
+    <div id="statsModal" onclick="closeModalOnBg(event)">
+        <div class="modal-content" id="statsContent"></div>
+    </div>
 
     <script>
-        const defaultData = [
-            // Wohnen & Haushalt
-            { id: 102, group: "Wohnen & Haushalt", name: "Hausrat / Privathaftpflicht", budget: 15.60, yearlyBudget: 187.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 103, group: "Wohnen & Haushalt", name: "Serafe (Radio/TV)", budget: 27.90, yearlyBudget: 335.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 104, group: "Wohnen & Haushalt", name: "Abfall und Entsorgung", budget: 40.00, yearlyBudget: 480.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            
-            // Mobilität
-            { id: 201, group: "Mobilität", name: "Treibstoff (beide Autos)", budget: 141.65, yearlyBudget: 1700.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 202, group: "Mobilität", name: "Versicherungen (beide)", budget: 68.35, yearlyBudget: 820.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 203, group: "Mobilität", name: "Strassensteuern (beide)", budget: 80.35, yearlyBudget: 964.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 204, group: "Mobilität", name: "Service & Unterhalt (beide)", budget: 154.15, yearlyBudget: 1850.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            
-            // Lebensunterhalt
-            { id: 301, group: "Lebensunterhalt", name: "Einkäufe (Nahrung/Haushalt)", budget: 1000.00, yearlyBudget: 12000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 302, group: "Lebensunterhalt", name: "Essen auswärts / Bestellt", budget: 250.00, yearlyBudget: 3000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 303, group: "Lebensunterhalt", name: "Kleider", budget: 250.00, yearlyBudget: 3000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 304, group: "Lebensunterhalt", name: "Krankenkasse", budget: 700.00, yearlyBudget: 8400.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 305, group: "Lebensunterhalt", name: "Gesundheitskosten (Arzt)", budget: 300.00, yearlyBudget: 3600.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            
-            // Freizeit
-            { id: 501, group: "Freizeit", name: "Freizeit-Aktivitäten", budget: 300.00, yearlyBudget: 3600.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 502, group: "Freizeit", name: "Training (Lina & Lara)", budget: 40.50, yearlyBudget: 486.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 503, group: "Freizeit", name: "Schule / Lager / Geschenk", budget: 30.00, yearlyBudget: 360.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 504, group: "Freizeit", name: "Geschenke (allgemein)", budget: 75.00, yearlyBudget: 900.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 505, group: "Freizeit", name: "Ferien", budget: 333.35, yearlyBudget: 4000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            
-            // Steuern & Sparen
-            { id: 601, group: "Steuern & Sparen", name: "Steuern", budget: 416.65, yearlyBudget: 5000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 602, group: "Steuern & Sparen", name: "Säule 3a", budget: 208.35, yearlyBudget: 2500.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 604, group: "Steuern & Sparen", name: "Reservebetrag", budget: 300.00, yearlyBudget: 3600.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+    // ─────────────────────────────────────────────────────────────
+    //  HELPERS
+    // ─────────────────────────────────────────────────────────────
+    function uid() {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+        return Date.now().toString(36) + Math.random().toString(36).slice(2);
+    }
 
-            // Daueraufträge / Ebill
-            { id: 101, group: "Daueraufträge / Ebill", name: "Miete (inkl. Wasser/Strom)", budget: 1300.00, yearlyBudget: 15600.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 205, group: "Daueraufträge / Ebill", name: "Auto-Rückstellung", budget: 250.00, yearlyBudget: 3000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 401, group: "Daueraufträge / Ebill", name: "Laufende Abos", budget: 32.00, yearlyBudget: 384.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 402, group: "Daueraufträge / Ebill", name: "Internet", budget: 20.00, yearlyBudget: 240.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 403, group: "Daueraufträge / Ebill", name: "Handy (Natel 2x)", budget: 22.00, yearlyBudget: 264.00, yearlySpent: 0, bilanz: 0, expenses: [] },
-            { id: 603, group: "Daueraufträge / Ebill", name: "Sparen Kinder & Invest", budget: 100.00, yearlyBudget: 1200.00, yearlySpent: 0, bilanz: 0, expenses: [] }
-        ];
+    function showToast(msg, duration = 2200) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), duration);
+    }
 
-        const groupOrder = ['Lebensunterhalt', 'Wohnen & Haushalt', 'Mobilität', 'Abos & Kommunikation', 'Freizeit', 'Steuern & Sparen', 'Daueraufträge / Ebill', 'Sonstiges'];
-        let data = [];
-        let historyData = [];
-        
-        function applyInitialAutoDeductions() {
-            const d = new Date();
-            const dateStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`;
-            data.forEach(cat => {
-                if (cat.group === 'Daueraufträge / Ebill' && cat.expenses.length === 0) {
-                    cat.expenses.push({
-                        id: Date.now() + Math.floor(Math.random()*10000),
-                        date: dateStr,
-                        amount: cat.budget,
-                        note: 'Auto-Abzug',
-                        isAuto: true
-                    });
-                }
-            });
-        }
+    function closeModalOnBg(e) {
+        if (e.target === document.getElementById('statsModal'))
+            document.getElementById('statsModal').style.display = 'none';
+    }
 
-        function loadData() {
-            try {
-                const savedV4 = localStorage.getItem('budgetDataV4');
-                if (savedV4) {
-                    data = JSON.parse(savedV4);
-                } else {
-                    data = JSON.parse(JSON.stringify(defaultData)); 
-                    applyInitialAutoDeductions();
-                }
-                
-                const savedHistory = localStorage.getItem('budgetHistory');
-                if (savedHistory) {
-                    historyData = JSON.parse(savedHistory);
-                }
-            } catch (e) { 
-                data = JSON.parse(JSON.stringify(defaultData)); 
+    function fmtCHF(n) {
+        return (n < 0 ? '−' : '') + Math.abs(n).toFixed(2);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  DEFAULT DATA
+    // ─────────────────────────────────────────────────────────────
+    const defaultData = [
+        { id: '102', group: "Wohnen & Haushalt",      name: "Hausrat / Privathaftpflicht",    budget: 15.60,  yearlyBudget: 187.00,   yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '103', group: "Wohnen & Haushalt",      name: "Serafe (Radio/TV)",              budget: 27.90,  yearlyBudget: 335.00,   yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '104', group: "Wohnen & Haushalt",      name: "Abfall und Entsorgung",          budget: 40.00,  yearlyBudget: 480.00,   yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '201', group: "Mobilität",              name: "Treibstoff (beide Autos)",       budget: 141.65, yearlyBudget: 1700.00,  yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '202', group: "Mobilität",              name: "Versicherungen (beide)",         budget: 68.35,  yearlyBudget: 820.00,   yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '203', group: "Mobilität",              name: "Strassensteuern (beide)",        budget: 80.35,  yearlyBudget: 964.00,   yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '204', group: "Mobilität",              name: "Service & Unterhalt (beide)",    budget: 154.15, yearlyBudget: 1850.00,  yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '301', group: "Lebensunterhalt",        name: "Einkäufe (Nahrung/Haushalt)",   budget: 1000.00,yearlyBudget: 12000.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '302', group: "Lebensunterhalt",        name: "Essen auswärts / Bestellt",      budget: 250.00, yearlyBudget: 3000.00,  yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '303', group: "Lebensunterhalt",        name: "Kleider",                        budget: 250.00, yearlyBudget: 3000.00,  yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '304', group: "Lebensunterhalt",        name: "Krankenkasse",                   budget: 700.00, yearlyBudget: 8400.00,  yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '305', group: "Lebensunterhalt",        name: "Gesundheitskosten (Arzt)",       budget: 300.00, yearlyBudget: 3600.00,  yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '501', group: "Freizeit",               name: "Freizeit-Aktivitäten",           budget: 300.00, yearlyBudget: 3600.00,  yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '502', group: "Freizeit",               name: "Training (Lina & Lara)",         budget: 40.50,  yearlyBudget: 486.00,   yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '503', group: "Freizeit",               name: "Schule / Lager / Geschenk",      budget: 30.00,  yearlyBudget: 360.00,   yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '504', group: "Freizeit",               name: "Geschenke (allgemein)",          budget: 75.00,  yearlyBudget: 900.00,   yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '505', group: "Freizeit",               name: "Ferien",                         budget: 333.35, yearlyBudget: 4000.00,  yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '601', group: "Steuern & Sparen",       name: "Steuern",                        budget: 416.65, yearlyBudget: 5000.00,  yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '602', group: "Steuern & Sparen",       name: "Säule 3a",                       budget: 208.35, yearlyBudget: 2500.00,  yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '604', group: "Steuern & Sparen",       name: "Reservebetrag",                  budget: 300.00, yearlyBudget: 3600.00,  yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '101', group: "Daueraufträge / Ebill",  name: "Miete (inkl. Wasser/Strom)",     budget: 1300.00,yearlyBudget: 15600.00, yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '205', group: "Daueraufträge / Ebill",  name: "Auto-Rückstellung",              budget: 250.00, yearlyBudget: 3000.00,  yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '401', group: "Daueraufträge / Ebill",  name: "Laufende Abos",                  budget: 32.00,  yearlyBudget: 384.00,   yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '402', group: "Daueraufträge / Ebill",  name: "Internet",                       budget: 20.00,  yearlyBudget: 240.00,   yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '403', group: "Daueraufträge / Ebill",  name: "Handy (Natel 2x)",               budget: 22.00,  yearlyBudget: 264.00,   yearlySpent: 0, bilanz: 0, expenses: [] },
+        { id: '603', group: "Daueraufträge / Ebill",  name: "Sparen Kinder & Invest",         budget: 100.00, yearlyBudget: 1200.00,  yearlySpent: 0, bilanz: 0, expenses: [] }
+    ];
+
+    const groupOrder = ['Lebensunterhalt','Wohnen & Haushalt','Mobilität','Abos & Kommunikation','Freizeit','Steuern & Sparen','Daueraufträge / Ebill','Sonstiges'];
+    let data = [];
+    let historyData = [];
+
+    // ─────────────────────────────────────────────────────────────
+    //  AUTO-DEDUCTIONS
+    // ─────────────────────────────────────────────────────────────
+    function applyInitialAutoDeductions() {
+        const d = new Date();
+        const dateStr = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`;
+        data.forEach(cat => {
+            if (cat.group === 'Daueraufträge / Ebill' && cat.expenses.length === 0) {
+                cat.expenses.push({ id: uid(), date: dateStr, amount: cat.budget, note: 'Auto-Abzug', isAuto: true });
+            }
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  LOAD / SAVE
+    // ─────────────────────────────────────────────────────────────
+    function loadData() {
+        try {
+            const savedV4 = localStorage.getItem('budgetDataV4');
+            if (savedV4) {
+                data = JSON.parse(savedV4);
+            } else {
+                data = JSON.parse(JSON.stringify(defaultData));
                 applyInitialAutoDeductions();
-                historyData = [];
             }
-            saveData();
+            const savedHistory = localStorage.getItem('budgetHistory');
+            historyData = savedHistory ? JSON.parse(savedHistory) : [];
+        } catch(e) {
+            data = JSON.parse(JSON.stringify(defaultData));
+            applyInitialAutoDeductions();
+            historyData = [];
         }
+        saveData();
+        checkExportReminder();
+    }
 
-        function saveData(shouldRender = true) {
-            localStorage.setItem('budgetDataV4', JSON.stringify(data));
-            localStorage.setItem('budgetHistory', JSON.stringify(historyData));
-            if (shouldRender) render();
+    function saveData(shouldRender = true) {
+        localStorage.setItem('budgetDataV4', JSON.stringify(data));
+        localStorage.setItem('budgetHistory', JSON.stringify(historyData));
+        if (shouldRender) render();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  AUTO-SAVE ON CLOSE (iPhone protection)
+    // ─────────────────────────────────────────────────────────────
+    window.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            triggerAutoExport();
         }
-        
-        function hardReset() {
-            if (confirm('Achtung: Dies löscht alle aktuellen Eingaben und lädt die Standard-Kategorien neu. Wirklich fortfahren?')) {
-                if (confirm('Bist du dir wirklich GANZ sicher? Alle bisherigen Daten gehen unwiderruflich verloren!')) {
-                    localStorage.removeItem('budgetDataV4');
-                    localStorage.removeItem('budgetHistory');
-                    data = JSON.parse(JSON.stringify(defaultData));
-                    applyInitialAutoDeductions();
-                    historyData = [];
-                    saveData();
-                }
-            }
-        }
+    });
+    window.addEventListener('pagehide', () => { triggerAutoExport(); });
+    window.addEventListener('beforeunload', () => { triggerAutoExport(); });
 
-        function addCategory() {
-            const group = document.getElementById('newCatGroup').value;
-            const name = document.getElementById('newCatName').value.trim();
-            const budget = parseFloat(document.getElementById('newCatBudget').value);
-            if (name && budget) {
-                const newCat = { 
-                    id: Date.now(), 
-                    group,
-                    name, 
-                    budget, 
-                    yearlyBudget: budget * 12, 
-                    yearlySpent: 0, 
-                    bilanz: 0, 
-                    expenses: [] 
-                };
-
-                if (group === "Daueraufträge / Ebill") {
-                    const d = new Date();
-                    newCat.expenses.push({
-                        id: Date.now() + 1,
-                        date: `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`,
-                        amount: budget,
-                        note: 'Auto-Abzug',
-                        isAuto: true
-                    });
-                }
-
-                data.push(newCat);
-                document.getElementById('newCatName').value = '';
-                document.getElementById('newCatBudget').value = '';
-                saveData();
-            }
-        }
-
-        function updateBudget(id, newBudget) {
-            const cat = data.find(c => c.id === id);
-            const val = parseFloat(newBudget);
-            if (cat && !isNaN(val) && val >= 0) {
-                cat.budget = val;
-                cat.yearlyBudget = val * 12;
-                saveData();
-            }
-        }
-
-        function toggleSettings(id) {
-            const el = document.getElementById('settings_' + id);
-            el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'flex' : 'none';
-        }
-
-        function deleteCategory(id) {
-            if (confirm('Kategorie löschen?')) {
-                data = data.filter(c => c.id !== id);
-                saveData();
-            }
-        }
-
-        function moveCategory(id, direction) {
-            const cat = data.find(c => c.id === id);
-            const groupName = cat.group || 'Sonstiges';
-            
-            const groupItems = data.filter(c => (c.group || 'Sonstiges') === groupName);
-            const currentIndex = groupItems.findIndex(c => c.id === id);
-            const newIndex = currentIndex + direction;
-
-            if (newIndex >= 0 && newIndex < groupItems.length) {
-                const idToSwapWith = groupItems[newIndex].id;
-                const mainIndex1 = data.findIndex(c => c.id === id);
-                const mainIndex2 = data.findIndex(c => c.id === idToSwapWith);
-                
-                [data[mainIndex1], data[mainIndex2]] = [data[mainIndex2], data[mainIndex1]];
-                saveData();
-            }
-        }
-
-        function changeGroup(id, newGroup) {
-            const cat = data.find(c => c.id === id);
-            const oldGroup = cat.group;
-            cat.group = newGroup;
-
-            if (newGroup === 'Daueraufträge / Ebill' && oldGroup !== 'Daueraufträge / Ebill') {
-                if (!cat.expenses.some(e => e.isAuto)) {
-                    const d = new Date();
-                    cat.expenses.push({
-                        id: Date.now(),
-                        date: `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`,
-                        amount: cat.budget,
-                        note: 'Auto-Abzug',
-                        isAuto: true
-                    });
-                }
-            } else if (newGroup !== 'Daueraufträge / Ebill' && oldGroup === 'Daueraufträge / Ebill') {
-                cat.expenses = cat.expenses.filter(e => !e.isAuto);
-            }
-            saveData();
-        }
-
-        function addExpense(catId) {
-            const amtInput = document.getElementById('amt_' + catId);
-            const noteInput = document.getElementById('note_' + catId);
-            const amount = parseFloat(amtInput.value.replace(',', '.'));
-            if (amount) {
-                const cat = data.find(c => c.id === catId);
-                const d = new Date();
-                cat.expenses.push({
-                    id: Date.now(),
-                    date: `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`,
-                    amount,
-                    note: noteInput.value || '-'
-                });
-                amtInput.value = ''; noteInput.value = '';
-                saveData();
-            }
-        }
-
-        function deleteExpense(catId, expId) {
-            if (confirm('Ausgabe löschen?')) {
-                const cat = data.find(c => c.id === catId);
-                cat.expenses = cat.expenses.filter(e => e.id !== expId);
-                saveData();
-            }
-        }
-
-        function getMonthNameFromData() {
-            let sampleDate = null;
-            for (let cat of data) {
-                for (let exp of cat.expenses) {
-                    if (exp.date) { sampleDate = exp.date; break; }
-                }
-                if (sampleDate) break;
-            }
-
-            const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
-            let year = new Date().getFullYear();
-            
-            if (sampleDate) {
-                const parts = sampleDate.split('.');
-                if (parts.length >= 2) {
-                    const mIndex = parseInt(parts[1], 10) - 1;
-                    if (mIndex >= 0 && mIndex < 12) return months[mIndex] + " " + year;
-                }
-            }
-            return months[new Date().getMonth()] + " " + year;
-        }
-
-        function resetMonth() {
-            if (confirm('Monat abschliessen? Die Ausgaben werden zum Jahrestotal addiert und der Monat für die Historie gespeichert.')) {
-                const d = new Date();
-                
-                // Historie-Snapshot erstellen
-                const snapshot = {
-                    id: Date.now(),
-                    monthName: getMonthNameFromData(),
-                    totalSpent: 0,
-                    categories: JSON.parse(JSON.stringify(data))
-                };
-                
-                data.forEach(cat => {
-                    const monthlySpent = cat.expenses.reduce((s, e) => s + e.amount, 0);
-                    snapshot.totalSpent += monthlySpent;
-                    
-                    cat.yearlySpent += monthlySpent;
-                    cat.bilanz += (cat.budget - monthlySpent);
-                    cat.expenses = [];
-
-                    if (cat.group === 'Daueraufträge / Ebill') {
-                        cat.expenses.push({
-                            id: Date.now() + Math.floor(Math.random()*10000),
-                            date: `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`,
-                            amount: cat.budget,
-                            note: 'Auto-Abzug',
-                            isAuto: true
-                        });
-                    }
-                });
-
-                historyData.push(snapshot);
-                saveData();
-            }
-        }
-
-        // --- AKTUALISIERTE FUNKTION ---
-        function showHistory() {
-            if (historyData.length === 0) {
-                alert("Noch keine abgeschlossenen Monate vorhanden.");
-                return;
-            }
-            
-            let html = `<h3 style="margin:0 0 10px 0;">🗓️ Historie</h3><div style="max-height: 60vh; overflow-y: auto;">`;
-            
-            [...historyData].reverse().forEach(h => {
-                html += `<details style="margin-bottom:8px; background:#f9f9f9; padding:8px; border-radius:6px; border:1px solid #ddd;">
-                            <summary style="font-weight:bold; color:#333;">${h.monthName} <span style="float:right; color:#007bff;">${h.totalSpent.toFixed(2)} CHF</span></summary>
-                            <div style="margin-top:8px;">`;
-                
-                h.categories.forEach(c => {
-                    const spent = c.expenses.reduce((s,e) => s + e.amount, 0);
-                    
-                    // Jede Kategorie als einzeln ausklappbares Element
-                    html += `<details style="margin-bottom:4px; background:#eef5ff; padding:6px; border-radius:4px; border:1px solid #cce0ff;">
-                                <summary style="font-size:0.9em; font-weight:bold; cursor:pointer; color:#333;">
-                                    ${c.name} <span style="float:right;">Total: ${spent.toFixed(2)}</span>
-                                </summary>
-                                <table style="width:100%; font-size:0.9em; margin-top:4px;">`;
-                    
-                    if (c.expenses.length > 0) {
-                        c.expenses.forEach(e => {
-                            html += `<tr>
-                                        <td style="padding:2px 10px; border-bottom:1px solid #eee; color:#555;">${e.date} ${e.note}</td>
-                                        <td style="text-align:right; padding:2px 6px; border-bottom:1px solid #eee;">${e.amount.toFixed(2)}</td>
-                                     </tr>`;
-                        });
-                    } else {
-                        html += `<tr>
-                                    <td colspan="2" style="padding:2px 10px; border-bottom:1px solid #eee; color:#999; font-style:italic;">Keine Ausgaben verbucht</td>
-                                 </tr>`;
-                    }
-                    html += `</table></details>`;
-                });
-                html += `</div></details>`;
-            });
-
-            html += `</div><br><button class="secondary" onclick="document.getElementById('statsModal').style.display='none'">Schliessen</button>`;
-            
-            document.getElementById('statsContent').innerHTML = html;
-            document.getElementById('statsModal').style.display = 'block';
-        }
-        // --------------------------------
-
-        function showStats() {
-            let totalBilanz = 0;
-            let totalYearlyRest = 0;
-            
-            let html = `<h3 style="margin:0 0 10px 0;">📊 Statistik</h3><div style="max-height: 60vh; overflow-y: auto;">`;
-
-            const renderGroup = (groupName, cats) => {
-                if (cats.length === 0) return '';
-                let groupHtml = `<div class="group-title">${groupName}</div>`;
-                groupHtml += `<table style="width:100%; font-size:0.85em; border-collapse: collapse; margin-bottom: 10px;">`;
-                groupHtml += `<tr><th style="text-align:left;">Kategorie</th><th style="text-align:right;">Mt. Bilanz</th><th style="text-align:right;">Jahr Rest</th></tr>`;
-                
-                cats.forEach(cat => {
-                    const spent = cat.expenses.reduce((s, e) => s + e.amount, 0);
-                    const bal = cat.bilanz + (cat.budget - spent);
-                    totalBilanz += bal;
-
-                    const actualYearlyBudget = cat.yearlyBudget || (cat.budget * 12);
-                    const actualYearlySpent = cat.yearlySpent || 0;
-                    const yearlyRest = actualYearlyBudget - actualYearlySpent - spent;
-                    totalYearlyRest += yearlyRest;
-
-                    groupHtml += `<tr>
-                                <td style="padding:6px 0; border-bottom:1px solid #eee; white-space:normal; word-break:break-word;">${cat.name}</td>
-                                <td style="padding:6px 0; text-align:right; border-bottom:1px solid #eee; color:${bal < 0 ? 'red' : 'green'}">${bal.toFixed(0)}</td>
-                                <td style="padding:6px 0; text-align:right; border-bottom:1px solid #eee; color:${yearlyRest < 0 ? 'red' : 'green'}">${yearlyRest.toFixed(0)}</td>
-                             </tr>`;
-                });
-                groupHtml += `</table>`;
-                return groupHtml;
-            };
-
-            groupOrder.forEach(groupName => {
-                const catsInGroup = data.filter(c => (c.group || 'Sonstiges') === groupName);
-                html += renderGroup(groupName, catsInGroup);
-            });
-
-            const otherCats = data.filter(c => !groupOrder.includes(c.group || 'Sonstiges'));
-            html += renderGroup('Weitere', otherCats);
-            
-            html += `<table style="width:100%; font-size:0.85em; border-collapse: collapse;">
-                     <tr style="border-top:2px solid #333; font-weight:bold;">
-                        <td style="padding:6px 0;">Gesamt</td>
-                        <td style="text-align:right; padding:6px 0;">${totalBilanz.toFixed(0)}</td>
-                        <td style="text-align:right; padding:6px 0;">${totalYearlyRest.toFixed(0)}</td>
-                     </tr></table></div>`;
-            html += `<br><button class="secondary" onclick="document.getElementById('statsModal').style.display='none'">Schliessen</button>`;
-            
-            document.getElementById('statsContent').innerHTML = html;
-            document.getElementById('statsModal').style.display = 'block';
-        }
-
-        function exportData() {
+    let lastAutoExport = 0;
+    function triggerAutoExport() {
+        const now = Date.now();
+        if (now - lastAutoExport < 3000) return; // debounce 3s
+        lastAutoExport = now;
+        try {
             const exportObj = { data, historyData };
+            const json = JSON.stringify(exportObj);
+            const blob = new Blob([json], { type: 'application/json' });
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([JSON.stringify(exportObj)], { type: 'application/json' }));
-            a.download = `budget.json`; a.click();
-        }
+            a.href = URL.createObjectURL(blob);
+            a.download = getExportFilename();
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+            localStorage.setItem('lastExportDate', new Date().toISOString().slice(0,10));
+        } catch(e) { /* silent fail */ }
+    }
 
-        function importData(e) {
-            const reader = new FileReader();
-            reader.onload = (ev) => { 
-                try {
-                    const imported = JSON.parse(ev.target.result);
-                    if (imported.data && imported.historyData) {
-                        data = imported.data;
-                        historyData = imported.historyData;
-                    } else {
-                        data = imported; 
-                    }
-                    saveData(); 
-                } catch(err) {
-                    alert("Fehler beim Importieren der Datei.");
+    function getExportFilename() {
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        const dd = String(d.getDate()).padStart(2,'0');
+        return `budget_${yyyy}-${mm}-${dd}.json`;
+    }
+
+    function manualExport() {
+        const exportObj = { data, historyData };
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(exportObj)], { type: 'application/json' }));
+        a.download = getExportFilename();
+        a.click();
+        localStorage.setItem('lastExportDate', new Date().toISOString().slice(0,10));
+        checkExportReminder();
+        showToast('✅ Gespeichert: ' + getExportFilename());
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  EXPORT REMINDER
+    // ─────────────────────────────────────────────────────────────
+    function checkExportReminder() {
+        const last = localStorage.getItem('lastExportDate');
+        const el = document.getElementById('exportReminder');
+        if (!el) return;
+        if (!last) {
+            document.getElementById('reminderText').textContent = 'Noch kein Export vorhanden. Bitte Daten sichern!';
+            el.classList.remove('hidden');
+            return;
+        }
+        const diff = Math.floor((Date.now() - new Date(last).getTime()) / 86400000);
+        if (diff >= 7) {
+            document.getElementById('reminderText').textContent = `Letzter Export vor ${diff} Tagen. Bitte jetzt sichern!`;
+            el.classList.remove('hidden');
+        } else {
+            el.classList.add('hidden');
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  IMPORT
+    // ─────────────────────────────────────────────────────────────
+    function importData(e) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                const imported = JSON.parse(ev.target.result);
+                if (imported.data && imported.historyData) {
+                    data = imported.data;
+                    historyData = imported.historyData;
+                } else {
+                    data = imported;
                 }
-            };
-            reader.readAsText(e.target.files[0]);
+                saveData();
+                showToast('📂 Import erfolgreich!');
+            } catch(err) { alert('Fehler beim Importieren der Datei.'); }
+        };
+        reader.readAsText(e.target.files[0]);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  HARD RESET
+    // ─────────────────────────────────────────────────────────────
+    function hardReset() {
+        if (!confirm('Achtung: Dies löscht ALLE Daten inkl. Historie und lädt die Standard-Kategorien neu. Wirklich fortfahren?')) return;
+        if (!confirm('Bist du dir GANZ sicher? Alle Ausgaben und die gesamte Monats-Historie gehen unwiderruflich verloren!')) return;
+        localStorage.removeItem('budgetDataV4');
+        localStorage.removeItem('budgetHistory');
+        localStorage.removeItem('lastExportDate');
+        data = JSON.parse(JSON.stringify(defaultData));
+        applyInitialAutoDeductions();
+        historyData = [];
+        saveData();
+        showToast('🔄 Daten zurückgesetzt');
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  CATEGORY MANAGEMENT
+    // ─────────────────────────────────────────────────────────────
+    function addCategory() {
+        const group  = document.getElementById('newCatGroup').value;
+        const name   = document.getElementById('newCatName').value.trim();
+        const budget = parseFloat(document.getElementById('newCatBudget').value);
+        if (!name || isNaN(budget) || budget < 0) return;
+
+        const newCat = { id: uid(), group, name, budget, yearlyBudget: budget * 12, yearlySpent: 0, bilanz: 0, expenses: [] };
+        if (group === 'Daueraufträge / Ebill') {
+            const d = new Date();
+            newCat.expenses.push({ id: uid(), date: `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`, amount: budget, note: 'Auto-Abzug', isAuto: true });
         }
+        data.push(newCat);
+        document.getElementById('newCatName').value = '';
+        document.getElementById('newCatBudget').value = '';
+        saveData();
+        showToast('➕ Kategorie hinzugefügt');
+    }
 
-        function renderCategoryHTML(cat) {
-            const spent = cat.expenses.reduce((s, e) => s + e.amount, 0);
-            const rest = cat.budget - spent;
-            const total = cat.bilanz + rest;
-            
-            return `
-            <div class="card">
-                <div class="cat-header">
-                    <div class="cat-title">${cat.name}</div>
-                    <div class="cat-stats">
-                        <span style="font-weight:bold; color:${rest < 0 ? 'red' : 'green'};">${rest.toFixed(2)}</span>
-                        <span style="color:#888; font-size:0.8em;">(Total: ${total.toFixed(0)})</span>
-                        <button class="cat-btn" onclick="toggleSettings(${cat.id})" title="Einstellungen">⚙️</button>
-                    </div>
-                </div>
-                
-                <div id="settings_${cat.id}" class="cat-settings">
-                    <input type="number" step="any" value="${cat.budget}" onchange="updateBudget(${cat.id}, this.value)" style="padding:2px; font-size:0.75em; width:65px; text-align:center;" title="Budget/Mt. anpassen">
-                    <select onchange="changeGroup(${cat.id}, this.value)" style="padding:2px; font-size:0.75em; width:110px; flex: 1;">
-                        ${groupOrder.map(g => `<option value="${g}" ${cat.group === g ? 'selected' : ''}>${g}</option>`).join('')}
-                        ${!groupOrder.includes(cat.group) ? `<option value="Sonstiges" selected>Sonstiges</option>` : ''}
-                    </select>
-                    <button class="cat-btn" onclick="moveCategory(${cat.id}, -1)">↑</button>
-                    <button class="cat-btn" onclick="moveCategory(${cat.id}, 1)">↓</button>
-                    <button class="cat-btn" style="color:red" onclick="deleteCategory(${cat.id})">✕</button>
-                </div>
-                
-                <div class="flex" style="margin-top:4px;">
-                    <input type="number" step="any" id="amt_${cat.id}" placeholder="CHF" style="flex:0.8;">
-                    <input type="text" id="note_${cat.id}" placeholder="Notiz" style="flex:1.2;">
-                    <button class="primary action-btn" style="width:35px;" onclick="addExpense(${cat.id})">OK</button>
-                </div>
-                <details>
-                    <summary>Historie (${cat.expenses.length})</summary>
-                    <div class="table-scroll">
-                        <table>
-                            <colgroup><col style="width:40px;"><col style="width:50px;"><col><col style="width:30px;"></colgroup>
-                            ${[...cat.expenses].reverse().map(e => `
-                                <tr>
-                                    <td>${e.date}</td>
-                                    <td><b>${e.amount}</b></td>
-                                    <td style="color:#666;">${e.note}</td>
-                                    <td style="text-align:right"><button class="danger action-btn" onclick="deleteExpense(${cat.id}, ${e.id})">✕</button></td>
-                                </tr>`).join('')}
-                        </table>
-                    </div>
-                </details>
-            </div>`;
+    function updateBudget(id, newBudget) {
+        const cat = data.find(c => c.id == id);
+        const val = parseFloat(newBudget);
+        if (cat && !isNaN(val) && val >= 0) {
+            cat.budget = val;
+            // Only auto-set yearlyBudget if it was previously also budget*12 (not manually set)
+            cat.yearlyBudget = val * 12;
+            saveData();
         }
+    }
 
-        function render() {
-            let html = '';
-            
-            groupOrder.forEach(groupName => {
-                const catsInGroup = data.filter(c => (c.group || 'Sonstiges') === groupName);
-                if (catsInGroup.length > 0) {
-                    html += `<div class="group-title">${groupName}</div>`;
-                    catsInGroup.forEach(cat => html += renderCategoryHTML(cat));
-                }
-            });
+    function toggleSettings(id) {
+        const el = document.getElementById('settings_' + id);
+        el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'flex' : 'none';
+    }
 
-            const otherCats = data.filter(c => !groupOrder.includes(c.group || 'Sonstiges'));
-            if (otherCats.length > 0) {
-                html += `<div class="group-title">Weitere</div>`;
-                otherCats.forEach(cat => html += renderCategoryHTML(cat));
+    function deleteCategory(id) {
+        if (!confirm('Kategorie und alle ihre Ausgaben löschen?')) return;
+        data = data.filter(c => c.id != id);
+        saveData();
+        showToast('🗑️ Kategorie gelöscht');
+    }
+
+    function moveCategory(id, direction) {
+        const cat = data.find(c => c.id == id);
+        const groupName = cat.group || 'Sonstiges';
+        const groupItems = data.filter(c => (c.group || 'Sonstiges') === groupName);
+        const currentIndex = groupItems.findIndex(c => c.id == id);
+        const newIndex = currentIndex + direction;
+        if (newIndex < 0 || newIndex >= groupItems.length) return;
+        const idToSwapWith = groupItems[newIndex].id;
+        const i1 = data.findIndex(c => c.id == id);
+        const i2 = data.findIndex(c => c.id == idToSwapWith);
+        [data[i1], data[i2]] = [data[i2], data[i1]];
+        saveData();
+    }
+
+    function changeGroup(id, newGroup) {
+        const cat = data.find(c => c.id == id);
+        const oldGroup = cat.group;
+        cat.group = newGroup;
+        if (newGroup === 'Daueraufträge / Ebill' && oldGroup !== 'Daueraufträge / Ebill') {
+            if (!cat.expenses.some(e => e.isAuto)) {
+                const d = new Date();
+                cat.expenses.push({ id: uid(), date: `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`, amount: cat.budget, note: 'Auto-Abzug', isAuto: true });
             }
-
-            document.getElementById('app').innerHTML = html;
+        } else if (newGroup !== 'Daueraufträge / Ebill' && oldGroup === 'Daueraufträge / Ebill') {
+            cat.expenses = cat.expenses.filter(e => !e.isAuto);
         }
-        
-        loadData();
+        saveData();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  EXPENSE MANAGEMENT
+    // ─────────────────────────────────────────────────────────────
+    function addExpense(catId) {
+        const amtInput  = document.getElementById('amt_' + catId);
+        const noteInput = document.getElementById('note_' + catId);
+        const amount = parseFloat(amtInput.value.replace(',', '.'));
+        if (isNaN(amount) || amount === 0) return;
+        const cat = data.find(c => c.id == catId);
+        const d = new Date();
+        cat.expenses.push({
+            id: uid(),
+            date: `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`,
+            amount,
+            note: noteInput.value || '-'
+        });
+        amtInput.value = '';
+        noteInput.value = '';
+        saveData();
+    }
+
+    function deleteExpense(catId, expId) {
+        if (!confirm('Ausgabe löschen?')) return;
+        const cat = data.find(c => c.id == catId);
+        cat.expenses = cat.expenses.filter(e => e.id != expId);
+        saveData();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  MONTH CLOSE
+    // ─────────────────────────────────────────────────────────────
+    function getMonthNameFromData() {
+        const months = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+        const year = new Date().getFullYear();
+        for (let cat of data) {
+            for (let exp of cat.expenses) {
+                if (exp.date) {
+                    const parts = exp.date.split('.');
+                    if (parts.length >= 2) {
+                        const mIndex = parseInt(parts[1], 10) - 1;
+                        if (mIndex >= 0 && mIndex < 12) return months[mIndex] + " " + year;
+                    }
+                }
+            }
+        }
+        return months[new Date().getMonth()] + " " + year;
+    }
+
+    function resetMonth() {
+        if (!confirm('Monat abschliessen? Die Ausgaben werden zum Jahrestotal addiert und der Monat in der Historie gespeichert.')) return;
+        const d = new Date();
+        const snapshot = { id: uid(), monthName: getMonthNameFromData(), totalSpent: 0, categories: JSON.parse(JSON.stringify(data)) };
+        data.forEach(cat => {
+            const monthlySpent = cat.expenses.reduce((s, e) => s + e.amount, 0);
+            snapshot.totalSpent += monthlySpent;
+            cat.yearlySpent += monthlySpent;
+            cat.bilanz += (cat.budget - monthlySpent);
+            cat.expenses = [];
+            if (cat.group === 'Daueraufträge / Ebill') {
+                cat.expenses.push({ id: uid(), date: `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.`, amount: cat.budget, note: 'Auto-Abzug', isAuto: true });
+            }
+        });
+        historyData.push(snapshot);
+        saveData();
+        showToast('✅ Monat abgeschlossen!');
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  HISTORY MODAL
+    // ─────────────────────────────────────────────────────────────
+    function showHistory() {
+        if (historyData.length === 0) { alert('Noch keine abgeschlossenen Monate vorhanden.'); return; }
+        let html = `<h3 style="margin:0 0 12px 0;">🗓️ Monats-Historie</h3><div style="max-height:62vh; overflow-y:auto;">`;
+        [...historyData].reverse().forEach(h => {
+            html += `<details style="margin-bottom:8px; background:#f9f9fb; padding:8px; border-radius:8px; border:1px solid #e0e4ec;">
+                        <summary style="font-weight:700; color:#333; cursor:pointer;">
+                            ${h.monthName} <span style="float:right; color:var(--blue); font-weight:800;">${h.totalSpent.toFixed(2)} CHF</span>
+                        </summary>
+                        <div style="margin-top:8px;">`;
+            h.categories.forEach(c => {
+                const spent = c.expenses.reduce((s,e) => s + e.amount, 0);
+                html += `<details style="margin-bottom:4px; background:#eef4ff; padding:5px 7px; border-radius:5px; border:1px solid #cce0ff;">
+                            <summary style="font-size:0.88em; font-weight:600; cursor:pointer; color:#333;">${c.name}
+                                <span style="float:right; color:#007bff;">${spent.toFixed(2)}</span>
+                            </summary>
+                            <table style="width:100%; font-size:0.88em; margin-top:4px;">`;
+                if (c.expenses.length > 0) {
+                    c.expenses.forEach(e => {
+                        html += `<tr>
+                            <td style="padding:2px 8px; border-bottom:1px solid #eee; color:#555;">${e.date} ${e.note}</td>
+                            <td style="text-align:right; padding:2px 6px; border-bottom:1px solid #eee;">${e.amount.toFixed(2)}</td>
+                        </tr>`;
+                    });
+                } else {
+                    html += `<tr><td colspan="2" style="padding:2px 8px; color:#aaa; font-style:italic;">Keine Ausgaben</td></tr>`;
+                }
+                html += `</table></details>`;
+            });
+            html += `</div></details>`;
+        });
+        html += `</div><br><button class="secondary" onclick="document.getElementById('statsModal').style.display='none'">Schliessen</button>`;
+        document.getElementById('statsContent').innerHTML = html;
+        document.getElementById('statsModal').style.display = 'block';
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  STATS MODAL
+    // ─────────────────────────────────────────────────────────────
+    function showStats() {
+        let totalBilanz = 0, totalYearlyRest = 0;
+        let html = `<h3 style="margin:0 0 12px 0;">📊 Jahresstatistik</h3><div style="max-height:62vh; overflow-y:auto;">`;
+
+        const renderGroup = (groupName, cats) => {
+            if (!cats.length) return '';
+            let g = `<div style="margin:10px 0 4px; font-weight:800; color:var(--blue); text-transform:uppercase; font-size:0.7em; letter-spacing:0.8px; border-bottom:2px solid #e0e4ec; padding-bottom:2px;">${groupName}</div>`;
+            g += `<table style="width:100%; font-size:0.84em; border-collapse:collapse; margin-bottom:8px;">
+                    <tr><th style="text-align:left; padding:4px 0;">Kategorie</th>
+                        <th style="text-align:right; width:70px;">Mt. Bilanz</th>
+                        <th style="text-align:right; width:70px;">Jahr Rest</th></tr>`;
+            cats.forEach(cat => {
+                const spent = cat.expenses.reduce((s, e) => s + e.amount, 0);
+                const bal = cat.bilanz + (cat.budget - spent);
+                totalBilanz += bal;
+                const yearlyRest = (cat.yearlyBudget || cat.budget * 12) - (cat.yearlySpent || 0) - spent;
+                totalYearlyRest += yearlyRest;
+                g += `<tr>
+                    <td style="padding:5px 0; border-bottom:1px solid #f0f2f7; word-break:break-word; white-space:normal;">${cat.name}</td>
+                    <td style="padding:5px 0; text-align:right; border-bottom:1px solid #f0f2f7; color:${bal < 0 ? 'var(--red)' : 'var(--green)'}; font-weight:700;">${bal.toFixed(0)}</td>
+                    <td style="padding:5px 0; text-align:right; border-bottom:1px solid #f0f2f7; color:${yearlyRest < 0 ? 'var(--red)' : 'var(--green)'}; font-weight:700;">${yearlyRest.toFixed(0)}</td>
+                </tr>`;
+            });
+            g += `</table>`;
+            return g;
+        };
+
+        groupOrder.forEach(g => html += renderGroup(g, data.filter(c => (c.group||'Sonstiges') === g)));
+        const other = data.filter(c => !groupOrder.includes(c.group||'Sonstiges'));
+        if (other.length) html += renderGroup('Weitere', other);
+
+        html += `<table style="width:100%; font-size:0.88em; border-collapse:collapse;">
+            <tr style="border-top:2px solid #333; font-weight:800;">
+                <td style="padding:6px 0;">Gesamt</td>
+                <td style="text-align:right; padding:6px 0; color:${totalBilanz < 0 ? 'var(--red)':'var(--green)'};">${totalBilanz.toFixed(0)}</td>
+                <td style="text-align:right; padding:6px 0; color:${totalYearlyRest < 0 ? 'var(--red)':'var(--green)'};">${totalYearlyRest.toFixed(0)}</td>
+            </tr></table>
+        <p style="font-size:0.72em; color:#999; margin:6px 0 0;">«Mt. Bilanz» = kumulierter Überschuss/Defizit aus bisherigen Monaten + aktuellem Monat. «Jahr Rest» = Jahresbudget minus alle gebuchten Ausgaben.</p>
+        </div><br><button class="secondary" onclick="document.getElementById('statsModal').style.display='none'">Schliessen</button>`;
+
+        document.getElementById('statsContent').innerHTML = html;
+        document.getElementById('statsModal').style.display = 'block';
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  RENDER
+    // ─────────────────────────────────────────────────────────────
+    function renderSummary() {
+        let totalBudget = 0, totalSpent = 0;
+        data.forEach(cat => {
+            totalBudget += cat.budget;
+            totalSpent  += cat.expenses.reduce((s, e) => s + e.amount, 0);
+        });
+        const rest = totalBudget - totalSpent;
+        const pct  = totalBudget > 0 ? Math.min(100, (totalSpent / totalBudget) * 100) : 0;
+        const color = pct > 90 ? 'var(--red)' : pct > 70 ? 'var(--yellow)' : 'var(--green)';
+
+        document.getElementById('sumBudget').textContent = fmtCHF(totalBudget);
+        document.getElementById('sumSpent').textContent  = fmtCHF(totalSpent);
+        document.getElementById('sumSpent').style.color  = pct > 90 ? 'var(--red)' : 'var(--text)';
+        document.getElementById('sumRest').textContent   = fmtCHF(rest);
+        document.getElementById('sumRest').style.color   = rest < 0 ? 'var(--red)' : 'var(--green)';
+        const bar = document.getElementById('sumBar');
+        bar.style.width = pct + '%';
+        bar.style.background = color;
+    }
+
+    function renderCategoryHTML(cat) {
+        const spent  = cat.expenses.reduce((s, e) => s + e.amount, 0);
+        const rest   = cat.budget - spent;
+        const total  = cat.bilanz + rest;
+        const pct    = cat.budget > 0 ? Math.min(100, (spent / cat.budget) * 100) : 0;
+        const barColor = pct > 90 ? 'var(--red)' : pct > 65 ? 'var(--yellow)' : 'var(--green)';
+        const restColor = rest < 0 ? 'var(--red)' : 'var(--green)';
+
+        const safeId = CSS.escape ? CSS.escape(String(cat.id)) : cat.id;
+
+        return `
+        <div class="card">
+            <div class="cat-header">
+                <div class="cat-title">${cat.name}</div>
+                <div class="cat-stats">
+                    <span style="font-weight:800; color:${restColor};">${fmtCHF(rest)}</span>
+                    <span class="bilanz-hint" title="Kumulierter Übertrag aus Vormonaten + aktuellem Monat">(Ü: ${total >= 0 ? '+' : ''}${total.toFixed(0)})</span>
+                    <button class="cat-btn" onclick="toggleSettings('${cat.id}')" title="Einstellungen">⚙️</button>
+                </div>
+            </div>
+
+            <div class="progress-wrap">
+                <div class="progress-bg">
+                    <div class="progress-fill" style="width:${pct}%; background:${barColor};"></div>
+                </div>
+            </div>
+
+            <div id="settings_${cat.id}" class="cat-settings">
+                <input type="number" step="any" value="${cat.budget}"
+                    onchange="updateBudget('${cat.id}', this.value)"
+                    style="padding:3px; font-size:0.78em; width:72px; text-align:center; flex: 0 0 72px;"
+                    title="Monatsbudget anpassen">
+                <select onchange="changeGroup('${cat.id}', this.value)" style="padding:3px; font-size:0.78em; flex:1;">
+                    ${groupOrder.map(g => `<option value="${g}" ${cat.group===g?'selected':''}>${g}</option>`).join('')}
+                    ${!groupOrder.includes(cat.group) ? `<option value="Sonstiges" selected>Sonstiges</option>` : ''}
+                </select>
+                <button class="cat-btn" onclick="moveCategory('${cat.id}', -1)" title="Nach oben">↑</button>
+                <button class="cat-btn" onclick="moveCategory('${cat.id}', 1)"  title="Nach unten">↓</button>
+                <button class="cat-btn" style="color:var(--red);" onclick="deleteCategory('${cat.id}')" title="Löschen">✕</button>
+            </div>
+
+            <div class="expense-row">
+                <input class="amt" type="number" step="any" id="amt_${cat.id}" placeholder="CHF"
+                    onkeydown="if(event.key==='Enter'){document.getElementById('note_${cat.id}').focus();}">
+                <input class="note" type="text" id="note_${cat.id}" placeholder="Notiz"
+                    onkeydown="if(event.key==='Enter') addExpense('${cat.id}')">
+                <button class="primary ok-btn action-btn" onclick="addExpense('${cat.id}')">OK</button>
+            </div>
+
+            <details>
+                <summary>Buchungen (${cat.expenses.length}) · ${fmtCHF(spent)} CHF</summary>
+                <div class="table-scroll">
+                    <table>
+                        <colgroup><col style="width:38px;"><col style="width:52px;"><col><col style="width:28px;"></colgroup>
+                        ${[...cat.expenses].reverse().map(e => `
+                        <tr>
+                            <td>${e.date}</td>
+                            <td><b>${e.amount.toFixed(2)}</b></td>
+                            <td style="color:#666;">${e.note}</td>
+                            <td style="text-align:right;">
+                                ${e.isAuto ? '' : `<button class="danger action-btn" onclick="deleteExpense('${cat.id}', '${e.id}')">✕</button>`}
+                            </td>
+                        </tr>`).join('')}
+                    </table>
+                </div>
+            </details>
+        </div>`;
+    }
+
+    function render() {
+        renderSummary();
+        let html = '';
+        groupOrder.forEach(groupName => {
+            const cats = data.filter(c => (c.group||'Sonstiges') === groupName);
+            if (cats.length) {
+                html += `<div class="group-title">${groupName}</div>`;
+                cats.forEach(cat => html += renderCategoryHTML(cat));
+            }
+        });
+        const other = data.filter(c => !groupOrder.includes(c.group||'Sonstiges'));
+        if (other.length) {
+            html += `<div class="group-title">Weitere</div>`;
+            other.forEach(cat => html += renderCategoryHTML(cat));
+        }
+        document.getElementById('app').innerHTML = html;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  BOOT
+    // ─────────────────────────────────────────────────────────────
+    loadData();
     </script>
 </body>
 </html>
