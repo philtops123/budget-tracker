@@ -27,13 +27,23 @@
     <main class="flex-1 overflow-y-auto px-4 py-4 pb-32">
         <section id="tab-tracker" class="tab-content space-y-4">
             
-            <!-- NEU: Dynamischer Datei-Backup-Banner direkt auf der Startseite -->
-            <div id="backup-banner" class="bg-amber-500 text-white p-3.5 rounded-2xl flex justify-between items-center shadow-xs hidden animate-pulse">
-                <div class="flex flex-col">
-                    <span class="text-xs font-bold">⚠️ Ungesicherte Daten vorhanden!</span>
-                    <span class="text-[10px] opacity-90">Tippe hier, um die neueste Datei auf dem iPhone zu speichern.</span>
+            <div class="bg-white p-4 rounded-2xl border border-gray-200 flex flex-col space-y-3 shadow-xs">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-2">
+                        <span id="file-status-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                        <span id="file-status-text" class="text-xs font-semibold text-gray-600">Daten sind gesichert</span>
+                    </div>
+                    <span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-semibold">iPhone Speicher</span>
                 </div>
-                <button onclick="exportBackupData()" class="bg-white text-amber-600 text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs active:scale-95 transition-all">Sichern</button>
+                <div class="flex space-x-2">
+                    <button onclick="exportBackupData()" class="flex-1 py-2.5 bg-gray-950 active:bg-gray-800 text-white font-semibold rounded-xl text-xs shadow-xs transition-all">
+                        Datei sichern
+                    </button>
+                    <label class="flex-1 py-2.5 bg-gray-100 active:bg-gray-200 text-gray-700 font-semibold rounded-xl text-xs text-center cursor-pointer transition-all">
+                        Datei einlesen
+                        <input id="btn-main-import" type="file" accept=".json" class="hidden">
+                    </label>
+                </div>
             </div>
 
             <div class="bg-white p-5 rounded-2xl shadow-xs border border-gray-100 text-center space-y-4">
@@ -50,7 +60,7 @@
 
             <div id="ai-validation-card" class="bg-amber-50 border border-amber-200 p-4 rounded-2xl space-y-3 hidden">
                 <div class="flex justify-between items-center">
-                    <h3 class="text-sm font-bold text-amber-800">KI-Vorschlag (Anpassung möglich)</h3>
+                    <h3 class="text-sm font-bold text-amber-800">Vorschlag (Algorithmus)</h3>
                     <span class="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-semibold">Prüfen</span>
                 </div>
                 <div class="grid grid-cols-2 gap-2 text-sm">
@@ -108,26 +118,26 @@
         </section>
 
         <section id="tab-stats" class="tab-content space-y-4 hidden">
+            <div class="bg-white p-4 rounded-2xl border border-gray-200 flex flex-col items-center">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider self-start mb-4">Verteilung nach Kategorien</h3>
+                <div class="w-full h-56 relative flex justify-center">
+                    <canvas id="chart-kategorien"></canvas>
+                </div>
+            </div>
             <div class="bg-white p-4 rounded-2xl border border-gray-200">
-                <canvas id="chart-historie" class="w-full h-48"></canvas>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Ausgaben-Verlauf (6 Monate)</h3>
+                <div class="w-full h-48">
+                    <canvas id="chart-historie"></canvas>
+                </div>
             </div>
         </section>
 
         <section id="tab-settings" class="tab-content space-y-4 hidden">
             <div class="bg-white p-5 rounded-2xl border border-gray-200 space-y-3">
                 <h3 class="text-sm font-bold text-gray-800">Sicherheit & API Schlüssel</h3>
-                <p class="text-xs text-gray-500">Dein Google AI Studio Key wird <strong>nur lokal im Browser</strong> gespeichert.</p>
+                <p class="text-xs text-gray-500">Dein Google AI Studio Key wird <strong>nur lokal im Browser</strong> für den AI Chat benötigt.</p>
                 <input id="gemini-key" type="password" placeholder="AIzaSy..." class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm">
                 <button id="btn-save-key" class="w-full py-2.5 bg-blue-600 text-white font-semibold rounded-xl text-sm">Lokal speichern</button>
-            </div>
-
-            <div class="bg-white p-5 rounded-2xl border border-gray-200 space-y-3">
-                <h3 class="text-sm font-bold text-gray-800">Datei-Backup einlesen</h3>
-                <p class="text-xs text-gray-500">Wähle deine neueste exportierte .json-Datei aus deinen iPhone-Dateien aus.</p>
-                <label class="block w-full py-3 bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm text-center cursor-pointer active:bg-gray-300">
-                    Backup-Datei auswählen
-                    <input id="btn-import" type="file" accept=".json" class="hidden">
-                </label>
             </div>
         </section>
     </main>
@@ -160,7 +170,8 @@
     <script>
         let categories = [];
         let transactions = [];
-        let chartInstance = null;
+        let chartHistorieInstance = null;
+        let chartKategorienInstance = null;
         let selectedMonthStr = new Date().toISOString().slice(0, 7);
         let recognition = null;
         let isRecording = false;
@@ -181,12 +192,16 @@
         }
 
         function checkBackupStatus() {
-            const banner = document.getElementById('backup-banner');
+            const dot = document.getElementById('file-status-dot');
+            const text = document.getElementById('file-status-text');
             const needed = localStorage.getItem('budget_backup_needed') === 'true';
+            
             if (needed) {
-                banner.classList.remove('hidden');
+                dot.className = "w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse";
+                text.innerText = "⚠️ Änderungen nicht exportiert";
             } else {
-                banner.classList.add('hidden');
+                dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+                text.innerText = "Daten sind als Datei gesichert";
             }
         }
 
@@ -212,6 +227,32 @@
             
             localStorage.setItem('budget_backup_needed', 'false');
             checkBackupStatus();
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.categories && parsed.transactions) {
+                        localStorage.setItem('budget_categories', JSON.stringify(parsed.categories));
+                        localStorage.setItem('budget_transactions', JSON.stringify(parsed.transactions));
+                        if(parsed.gemini_key) localStorage.setItem('gemini_api_key', parsed.gemini_key);
+                        localStorage.setItem('budget_backup_needed', 'false');
+                        alert("Datei erfolgreich eingelesen!");
+                        loadAllData();
+                        loadApiKey();
+                        checkBackupStatus();
+                    } else {
+                        alert("Ungültiges Dateiformat.");
+                    }
+                } catch(err) {
+                    alert("Fehler beim Lesen der Datei.");
+                }
+            };
+            reader.readAsText(file);
         }
 
         function loadAllData() {
@@ -334,8 +375,51 @@
         function renderTransactionsList() {
             const txs = transactions.filter(t => t.month === selectedMonthStr).sort((a,b) => b.date.localeCompare(a.date));
             const container = document.getElementById('transactions-list');
-            container.innerHTML = txs.length === 0 ? '<p class="text-xs text-gray-400 p-2">Keine Buchungen in diesem Monat.</p>' : '';
-            txs.forEach(t => {
+            container.innerHTML = '';
+
+            const manualTxs = txs.filter(t => !t.vendor.startsWith("Automatisch:"));
+            const autoTxs = txs.filter(t => t.vendor.startsWith("Automatisch:"));
+
+            if (txs.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-400 p-2">Keine Buchungen in diesem Monat.</p>';
+                return;
+            }
+
+            // 1. Automatische Buchungen im einklappbaren Ordner (falls vorhanden)
+            if (autoTxs.length > 0) {
+                const totalAuto = autoTxs.reduce((sum, t) => sum + parseFloat(t.amount), 0).toFixed(2);
+                let folderHtml = `
+                    <details class="bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-2xs mb-3">
+                        <summary class="p-3 text-sm font-semibold text-gray-600 flex justify-between items-center cursor-pointer select-none">
+                            <span class="flex items-center space-x-2">
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                                <span>Automatische Buchungen (${autoTxs.length})</span>
+                            </span>
+                            <span class="font-bold text-gray-500">-${totalAuto} CHF</span>
+                        </summary>
+                        <div class="p-2 bg-white border-t border-gray-100 space-y-1.5">
+                `;
+                
+                autoTxs.forEach(t => {
+                    const cat = categories.find(c => c.id == t.category_id);
+                    folderHtml += `
+                        <div class="p-2 bg-gray-50/50 rounded-lg flex justify-between items-center text-xs">
+                            <div>
+                                <p class="font-medium text-gray-700">${t.vendor.replace("Automatisch: ", "")}</p>
+                                <p class="text-[10px] text-gray-400">${t.date}</p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="font-semibold">-${parseFloat(t.amount).toFixed(2)} CHF</span>
+                                <button onclick="deleteTx(${t.id})" class="text-red-400 font-bold px-1 text-sm hover:text-red-600">×</button>
+                            </div>
+                        </div>`;
+                });
+                folderHtml += `</div></details>`;
+                container.innerHTML += folderHtml;
+            }
+
+            // 2. Manuelle normale Buchungsliste
+            manualTxs.forEach(t => {
                 const cat = categories.find(c => c.id == t.category_id);
                 container.innerHTML += `
                     <div class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center text-sm">
@@ -410,31 +494,7 @@
         }
 
         function setupEventListeners() {
-            document.getElementById('btn-import').addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const parsed = JSON.parse(event.target.result);
-                        if (parsed.categories && parsed.transactions) {
-                            localStorage.setItem('budget_categories', JSON.stringify(parsed.categories));
-                            localStorage.setItem('budget_transactions', JSON.stringify(parsed.transactions));
-                            if(parsed.gemini_key) localStorage.setItem('gemini_api_key', parsed.gemini_key);
-                            localStorage.setItem('budget_backup_needed', 'false');
-                            alert("Backup-Datei erfolgreich eingelesen!");
-                            loadAllData();
-                            loadApiKey();
-                            checkBackupStatus();
-                        } else {
-                            alert("Ungültiges Dateiformat.");
-                        }
-                    } catch(err) {
-                        alert("Fehler beim Lesen der Datei.");
-                    }
-                };
-                reader.readAsText(file);
-            });
+            document.getElementById('btn-main-import').addEventListener('change', handleFileImport);
 
             const btnVoice = document.getElementById('btn-voice');
             const statusText = document.getElementById('voice-status');
@@ -476,10 +536,9 @@
                 statusText.innerText = "Spracherkennung wird nicht unterstützt.";
             }
 
+            // Lokaler Algorithmus anstelle von KI
             document.getElementById('btn-analyze').addEventListener('click', () => {
-                if(!getApiKey()) { statusText.innerText = "Bitte API-Key unter 'Settings' erfassen!"; return; }
-                statusText.innerText = "Sende Anfrage an Gemini KI...";
-                analyzeTextWithGeminiDirectly();
+                analyzeTextWithDeterministicAlgorithm();
             });
 
             document.getElementById('btn-save-key').addEventListener('click', () => {
@@ -497,44 +556,55 @@
             document.getElementById('btn-send-chat').addEventListener('click', sendChatToAssistantDirectly);
         }
 
-        async function analyzeTextWithGeminiDirectly() {
-            const key = getApiKey();
+        // Lokaler, unlimitierter Analyse-Algorithmus
+        function analyzeTextWithDeterministicAlgorithm() {
             const text = document.getElementById('text-input').value.trim();
             const statusText = document.getElementById('voice-status');
             if (!text) return;
 
-            const catList = categories.map(c => c.name);
-            const prompt = `Du bist ein Schweizer Budget-Experte. Analysiere diesen Freitext einer Buchung: "${text}". Ordne den Text zwingend einer dieser exakten Kategorien zu: ${JSON.stringify(catList)}. Antworte ausschliesslich als gültiges JSON-Objekt mit exakt dieser Struktur: {"vendor": "Händlername", "amount": 0.00, "category": "Exakter Kategoriename aus der Liste"}`;
+            // 1. Betrag finden (Zahlenfolge mit optionalem Dezimalpunkt/Komma)
+            const amountMatch = text.replace(',', '.').match(/\d+(\.\d{1,2})?/);
+            const amount = amountMatch ? parseFloat(amountMatch[0]) : 0.00;
 
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
-            
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: { responseMimeType: "application/json" }
-                    })
-                });
+            // 2. Händler bestimmen (Text ohne den Betrag und Währungskürzel)
+            let vendor = text.replace(/\d+([.,]\d{1,2})?/, '').replace(/chf|franken|ch/i, '').trim();
+            vendor = vendor.replace(/^bei|^im|^in/i, '').trim(); // Füllwörter säubern
+            if (!vendor) vendor = "Unbekannter Händler";
+            // Erste Buchstabe gross
+            vendor = vendor.charAt(0).toUpperCase() + vendor.slice(1);
 
-                const resJson = await response.json();
-                let rawText = resJson.candidates[0].content.parts[0].text;
-                const parsed = JSON.parse(rawText.trim());
+            // 3. Kategorie-Matching via Keywords (Lokale Logik)
+            let matchedCat = categories[0]; // Fallback
+            const lowerText = text.toLowerCase();
 
-                document.getElementById('val-vendor').value = parsed.vendor || "";
-                document.getElementById('val-amount').value = parsed.amount || 0;
-
-                const aiCat = parsed.category ? parsed.category.trim().toLowerCase() : "";
-                const match = categories.find(c => c.name.toLowerCase() === aiCat);
-                if(match) document.getElementById('val-category').value = match.id;
-
-                document.getElementById('ai-validation-card').classList.remove('hidden');
-                statusText.innerText = "Kategorisierung abgeschlossen.";
-            } catch (err) {
-                console.error(err);
-                statusText.innerText = "Fehler bei der KI-Analyse.";
+            // Direktes Namens-Matching abfragen
+            for (const cat of categories) {
+                if (lowerText.includes(cat.name.toLowerCase())) {
+                    matchedCat = cat;
+                    break;
+                }
             }
+
+            // Intelligentes Keyword-Mapping für Schweizer Standardeinkäufe
+            if (lowerText.includes('coop') || lowerText.includes('migros') || lowerText.includes('denner') || lowerText.includes('aldi') || lowerText.includes('lidl') || lowerText.includes('landoland')) {
+                matchedCat = categories.find(c => c.name.includes('Nahrung')) || matchedCat;
+            } else if (lowerText.includes('restaurant') || lowerText.includes('bar') || lowerText.includes('kino') || lowerText.includes('bier') || lowerText.includes('pub') || lowerText.includes('mc') || lowerText.includes('mcdonald')) {
+                matchedCat = categories.find(c => c.name.includes('auswärts')) || matchedCat;
+            } else if (lowerText.includes('tanken') || lowerText.includes('benzin') || lowerText.includes('skoda') || lowerText.includes('shell') || lowerText.includes('socar')) {
+                matchedCat = categories.find(c => c.name.includes('Skoda tank')) || matchedCat;
+            } else if (lowerText.includes('arzt') || lowerText.includes('apotheke') || lowerText.includes('pille') || lowerText.includes('medikament')) {
+                matchedCat = categories.find(c => c.name.includes('Gesundheit')) || matchedCat;
+            } else if (lowerText.includes('zug') || lowerText.includes('sbb') || lowerText.includes('ticket') || lowerText.includes('bus')) {
+                matchedCat = categories.find(c => c.name.includes('Freizeit')) || matchedCat;
+            }
+
+            // Werte ins Validierungsfenster eintragen
+            document.getElementById('val-vendor').value = vendor;
+            document.getElementById('val-amount').value = amount;
+            if (matchedCat) document.getElementById('val-category').value = matchedCat.id;
+
+            document.getElementById('ai-validation-card').classList.remove('hidden');
+            statusText.innerText = "Analyse via Algorithmus abgeschlossen.";
         }
 
         function saveAiTransaction() {
@@ -638,18 +708,72 @@
         }
 
         function renderCharts() {
+            // --- CHART 1: Kategorien-Verteilung (Aktueller Monat) ---
+            const currentMonthTxs = transactions.filter(t => t.month === selectedMonthStr);
+            const catSums = {};
+            
+            currentMonthTxs.forEach(t => {
+                const cat = categories.find(c => c.id == t.category_id);
+                const name = cat ? cat.name : "Unbekannt";
+                catSums[name] = (catSums[name] || 0) + parseFloat(t.amount);
+            });
+
+            const katLabels = Object.keys(catSums);
+            const katData = Object.values(catSums);
+
+            const ctxKat = document.getElementById('chart-kategorien').getContext('2d');
+            if (chartKategorienInstance) chartKategorienInstance.destroy();
+            
+            chartKategorienInstance = new Chart(ctxKat, {
+                type: 'doughnut',
+                data: {
+                    labels: katLabels,
+                    datasets: [{
+                        data: katData,
+                        backgroundColor: [
+                            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', 
+                            '#ec4899', '#14b8a6', '#6b7280', '#a855f7', '#06b6d4'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: { boxWidth: 12, font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+
+            // --- CHART 2: Historischer Trend (Letzte 6 Monate) ---
             const months = [...new Set(transactions.map(t => t.month))].sort().slice(-6);
             const totals = months.map(m => transactions.filter(t => t.month === m).reduce((sum, t) => sum + parseFloat(t.amount), 0));
 
-            const ctx = document.getElementById('chart-historie').getContext('2d');
-            if(chartInstance) chartInstance.destroy();
-            chartInstance = new Chart(ctx, {
+            const ctxHist = document.getElementById('chart-historie').getContext('2d');
+            if(chartHistorieInstance) chartHistorieInstance.destroy();
+            
+            chartHistorieInstance = new Chart(ctxHist, {
                 type: 'bar',
                 data: {
                     labels: months,
-                    datasets: [{ label: 'Ausgaben (CHF)', data: totals, backgroundColor: '#3b82f6' }]
+                    datasets: [{ 
+                        label: 'Gesamtausgaben (CHF)', 
+                        data: totals, 
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6
+                    }]
                 },
-                options: { responsive: true, maintainAspectRatio: false }
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
             });
         }
     </script>
