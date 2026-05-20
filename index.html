@@ -26,6 +26,16 @@
 
     <main class="flex-1 overflow-y-auto px-4 py-4 pb-32">
         <section id="tab-tracker" class="tab-content space-y-4">
+            
+            <!-- NEU: Dynamischer Datei-Backup-Banner direkt auf der Startseite -->
+            <div id="backup-banner" class="bg-amber-500 text-white p-3.5 rounded-2xl flex justify-between items-center shadow-xs hidden animate-pulse">
+                <div class="flex flex-col">
+                    <span class="text-xs font-bold">⚠️ Ungesicherte Daten vorhanden!</span>
+                    <span class="text-[10px] opacity-90">Tippe hier, um die neueste Datei auf dem iPhone zu speichern.</span>
+                </div>
+                <button onclick="exportBackupData()" class="bg-white text-amber-600 text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs active:scale-95 transition-all">Sichern</button>
+            </div>
+
             <div class="bg-white p-5 rounded-2xl shadow-xs border border-gray-100 text-center space-y-4">
                 <p class="text-sm text-gray-500 font-medium">Spracheingabe halten (z.B. "Coop 23.50")</p>
                 <div class="flex justify-center items-center">
@@ -110,6 +120,15 @@
                 <input id="gemini-key" type="password" placeholder="AIzaSy..." class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm">
                 <button id="btn-save-key" class="w-full py-2.5 bg-blue-600 text-white font-semibold rounded-xl text-sm">Lokal speichern</button>
             </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 space-y-3">
+                <h3 class="text-sm font-bold text-gray-800">Datei-Backup einlesen</h3>
+                <p class="text-xs text-gray-500">Wähle deine neueste exportierte .json-Datei aus deinen iPhone-Dateien aus.</p>
+                <label class="block w-full py-3 bg-gray-200 text-gray-700 font-semibold rounded-xl text-sm text-center cursor-pointer active:bg-gray-300">
+                    Backup-Datei auswählen
+                    <input id="btn-import" type="file" accept=".json" class="hidden">
+                </label>
+            </div>
         </section>
     </main>
 
@@ -139,46 +158,8 @@
     </nav>
 
     <script>
-        // LOKALE DATENBANK-LOGIK (Ersatz für SQLite)
-        let categories = JSON.parse(localStorage.getItem('local_categories')) || [];
-        let transactions = JSON.parse(localStorage.getItem('local_transactions')) || [];
-        let processedMonths = JSON.parse(localStorage.getItem('local_processed_months')) || [];
-
-        // Standard-Kategorien initialisieren falls leer
-        if (categories.length === 0) {
-            categories = [
-                {id: 1, name: "Miete", total_limit: 1300.0, budget_type: 1},
-                {id: 2, name: "Hausratversicherung", total_limit: 15.60, budget_type: 1},
-                {id: 3, name: "Krankenkasse", total_limit: 650.0, budget_type: 1},
-                {id: 4, name: "Skoda tank", total_limit: 130.0, budget_type: 1},
-                {id: 5, name: "Autorückstellung", total_limit: 200.0, budget_type: 1},
-                {id: 6, name: "Abos", total_limit: 32.0, budget_type: 1},
-                {id: 7, name: "Internet", total_limit: 22.0, budget_type: 1},
-                {id: 8, name: "Natelabo", total_limit: 22.0, budget_type: 1},
-                {id: 9, name: "Sparen", total_limit: 100.0, budget_type: 1},
-                {id: 10, name: "Steuern", total_limit: 4500.0, budget_type: 2},
-                {id: 11, name: "Serafe", total_limit: 336.0, budget_type: 2},
-                {id: 12, name: "Skoda versicherung", total_limit: 528.0, budget_type: 2},
-                {id: 13, name: "Strassensteuer", total_limit: 552.0, budget_type: 2},
-                {id: 14, name: "Ferien", total_limit: 4000.0, budget_type: 2},
-                {id: 15, name: "Einkäufe Nahrung u W.", total_limit: 1000.0, budget_type: 0},
-                {id: 16, name: "Essen auswärts", total_limit: 250.0, budget_type: 0},
-                {id: 17, name: "Freizeitaktivität", total_limit: 300.0, budget_type: 0},
-                {id: 18, name: "Gesundheitskosten", total_limit: 300.0, budget_type: 0},
-                {id: 19, name: "Abfall und Entsorgung", total_limit: 40.0, budget_type: 0},
-                {id: 20, name: "Schule / Lager / Geschenke", total_limit: 30.0, budget_type: 0},
-                {id: 21, name: "Kleider", total_limit: 250.0, budget_type: 0},
-                {id: 22, name: "Training Kinder", total_limit: 41.0, budget_type: 0},
-                {id: 23, name: "Reservebetrag", total_limit: 300.0, budget_type: 0},
-                {id: 24, name: "Säule 3A", total_limit: 208.0, budget_type: 0}
-            ];
-            saveCategories();
-        }
-
-        function saveCategories() { localStorage.setItem('local_categories', JSON.stringify(categories)); }
-        function saveTransactions() { localStorage.setItem('local_transactions', JSON.stringify(transactions)); }
-        function saveProcessedMonths() { localStorage.setItem('local_processed_months', JSON.stringify(processedMonths)); }
-
+        let categories = [];
+        let transactions = [];
         let chartInstance = null;
         let selectedMonthStr = new Date().toISOString().slice(0, 7);
         let recognition = null;
@@ -187,10 +168,59 @@
         document.addEventListener("DOMContentLoaded", () => {
             initMonthSelect();
             loadApiKey();
+            checkAndSeedDatabase();
             initMonthAutoTransactions();
             loadAllData();
             setupEventListeners();
+            checkBackupStatus();
         });
+
+        function changeMade() {
+            localStorage.setItem('budget_backup_needed', 'true');
+            checkBackupStatus();
+        }
+
+        function checkBackupStatus() {
+            const banner = document.getElementById('backup-banner');
+            const needed = localStorage.getItem('budget_backup_needed') === 'true';
+            if (needed) {
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+            }
+        }
+
+        function windowSave() {
+            localStorage.setItem('budget_categories', JSON.stringify(categories));
+            localStorage.setItem('budget_transactions', JSON.stringify(transactions));
+            changeMade();
+        }
+
+        function exportBackupData() {
+            const data = {
+                categories: JSON.parse(localStorage.getItem('budget_categories')) || [],
+                transactions: JSON.parse(localStorage.getItem('budget_transactions')) || [],
+                gemini_key: localStorage.getItem('gemini_api_key') || ''
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const date = new Date().toISOString().slice(0,10);
+            a.href = url;
+            a.download = `budget_backup_${date}.json`;
+            a.click();
+            
+            localStorage.setItem('budget_backup_needed', 'false');
+            checkBackupStatus();
+        }
+
+        function loadAllData() {
+            categories = JSON.parse(localStorage.getItem('budget_categories')) || [];
+            transactions = JSON.parse(localStorage.getItem('budget_transactions')) || [];
+            populateDropdowns();
+            renderTransactionsList();
+            renderBudgetsOverview();
+        }
 
         function initMonthSelect() {
             const select = document.getElementById('month-select');
@@ -213,16 +243,54 @@
             });
         }
 
+        function checkAndSeedDatabase() {
+            let localCats = JSON.parse(localStorage.getItem('budget_categories'));
+            if (!localCats || localCats.length === 0) {
+                const defaultCats = [
+                    {id: 1, name: "Miete", total_limit: 1300.0, budget_type: 1},
+                    {id: 2, name: "Hausratversicherung", total_limit: 15.60, budget_type: 1},
+                    {id: 3, name: "Krankenkasse", total_limit: 650.0, budget_type: 1},
+                    {id: 4, name: "Skoda tank", total_limit: 130.0, budget_type: 1},
+                    {id: 5, name: "Autorückstellung", total_limit: 200.0, budget_type: 1},
+                    {id: 6, name: "Abos", total_limit: 32.0, budget_type: 1},
+                    {id: 7, name: "Internet", total_limit: 22.0, budget_type: 1},
+                    {id: 8, name: "Natelabo", total_limit: 22.0, budget_type: 1},
+                    {id: 9, name: "Sparen", total_limit: 100.0, budget_type: 1},
+                    {id: 10, name: "Steuern", total_limit: 4500.0, budget_type: 2},
+                    {id: 11, name: "Serafe", total_limit: 336.0, budget_type: 2},
+                    {id: 12, name: "Skoda versicherung", total_limit: 528.0, budget_type: 2},
+                    {id: 13, name: "Strassensteuer", total_limit: 552.0, budget_type: 2},
+                    {id: 14, name: "Ferien", total_limit: 4000.0, budget_type: 2},
+                    {id: 15, name: "Einkäufe Nahrung u W.", total_limit: 1000.0, budget_type: 0},
+                    {id: 16, name: "Essen auswärts", total_limit: 250.0, budget_type: 0},
+                    {id: 17, name: "Freizeitaktivität", total_limit: 300.0, budget_type: 0},
+                    {id: 18, name: "Gesundheitskosten", total_limit: 300.0, budget_type: 0},
+                    {id: 19, name: "Abfall und Entsorgung", total_limit: 40.0, budget_type: 0},
+                    {id: 20, name: "Schule / Lager / Geschenke", total_limit: 30.0, budget_type: 0},
+                    {id: 21, name: "Kleider", total_limit: 250.0, budget_type: 0},
+                    {id: 22, name: "Training Kinder", total_limit: 41.0, budget_type: 0},
+                    {id: 23, name: "Reservebetrag", total_limit: 300.0, budget_type: 0},
+                    {id: 24, name: "Säule 3A", total_limit: 208.0, budget_type: 0}
+                ];
+                localStorage.setItem('budget_categories', JSON.stringify(defaultCats));
+            }
+        }
+
         function initMonthAutoTransactions() {
             const currentMonth = new Date().toISOString().slice(0, 7);
             const todayStr = new Date().toISOString().slice(0, 10);
             
-            if (!processedMonths.includes(currentMonth)) {
-                categories.forEach(cat => {
+            let localTxs = JSON.parse(localStorage.getItem('budget_transactions')) || [];
+            let localCats = JSON.parse(localStorage.getItem('budget_categories')) || [];
+            
+            const hasAuto = localTxs.some(t => t.month === currentMonth && t.vendor.startsWith("Automatisch:"));
+            
+            if (!hasAuto) {
+                localCats.forEach(cat => {
                     if (cat.budget_type > 0) {
                         let amount = cat.budget_type === 1 ? cat.total_limit : cat.total_limit / 12.0;
-                        transactions.push({
-                            id: Date.now() + Math.random(),
+                        localTxs.push({
+                            id: Math.floor(Math.random() * 1000000000),
                             category_id: cat.id,
                             vendor: `Automatisch: ${cat.name}`,
                             amount: parseFloat(amount),
@@ -231,9 +299,8 @@
                         });
                     }
                 });
-                processedMonths.push(currentMonth);
-                saveTransactions();
-                saveProcessedMonths();
+                localStorage.setItem('budget_transactions', JSON.stringify(localTxs));
+                changeMade();
             }
         }
 
@@ -252,12 +319,6 @@
         }
         function getApiKey() { return localStorage.getItem('gemini_api_key'); }
 
-        function loadAllData() {
-            populateDropdowns();
-            loadTransactions();
-            loadBudgetsOverview();
-        }
-
         function populateDropdowns() {
             const select = document.getElementById('val-category');
             if(select) {
@@ -270,7 +331,7 @@
             }
         }
 
-        function loadTransactions() {
+        function renderTransactionsList() {
             const txs = transactions.filter(t => t.month === selectedMonthStr).sort((a,b) => b.date.localeCompare(a.date));
             const container = document.getElementById('transactions-list');
             container.innerHTML = txs.length === 0 ? '<p class="text-xs text-gray-400 p-2">Keine Buchungen in diesem Monat.</p>' : '';
@@ -283,14 +344,14 @@
                             <p class="text-xs text-gray-400">${t.date} · <span class="bg-gray-100 px-1.5 py-0.5 rounded text-[10px]">${cat ? cat.name : 'Keine'}</span></p>
                         </div>
                         <div class="flex items-center space-x-3">
-                            <span class="font-bold">-${t.amount.toFixed(2)} CHF</span>
+                            <span class="font-bold">-${parseFloat(t.amount).toFixed(2)} CHF</span>
                             <button onclick="deleteTx(${t.id})" class="text-red-500 font-bold px-1">×</button>
                         </div>
                     </div>`;
             });
         }
 
-        function loadBudgetsOverview() {
+        function renderBudgetsOverview() {
             const currentYear = selectedMonthStr.slice(0, 4);
             const allYearTxs = transactions.filter(t => t.date.startsWith(currentYear));
             
@@ -309,14 +370,14 @@
                 let percent = 0;
                 
                 if (c.budget_type === 2) {
-                    spent = allYearTxs.filter(t => t.category_id == c.id).reduce((sum, t) => sum + t.amount, 0);
+                    spent = allYearTxs.filter(t => t.category_id == c.id).reduce((sum, t) => sum + parseFloat(t.amount), 0);
                     percent = Math.min((spent / c.total_limit) * 100, 100);
                     const monthlyShare = (c.total_limit / 12).toFixed(2);
-                    infoText = `<span class="font-bold text-gray-900">${spent.toFixed(2)}</span> / ${c.total_limit.toFixed(0)} CHF <span class="text-[10px] text-gray-400 block font-normal">Ziel: +${monthlyShare} CHF/Mt.</span>`;
+                    infoText = `<span class="font-bold text-gray-900">${spent.toFixed(2)}</span> / ${parseFloat(c.total_limit).toFixed(0)} CHF <span class="text-[10px] text-gray-400 block font-normal">Ziel: +${monthlyShare} CHF/Mt.</span>`;
                 } else {
-                    spent = transactions.filter(t => t.category_id == c.id && t.month === selectedMonthStr).reduce((sum, t) => sum + t.amount, 0);
+                    spent = transactions.filter(t => t.category_id == c.id && t.month === selectedMonthStr).reduce((sum, t) => sum + parseFloat(t.amount), 0);
                     percent = Math.min((spent / c.total_limit) * 100, 100);
-                    infoText = `<span class="font-bold text-gray-900">${spent.toFixed(2)}</span> / ${c.total_limit.toFixed(0)} CHF`;
+                    infoText = `<span class="font-bold text-gray-900">${spent.toFixed(2)}</span> / ${parseFloat(c.total_limit).toFixed(0)} CHF`;
                 }
                 
                 let barColor = "bg-blue-600";
@@ -349,6 +410,32 @@
         }
 
         function setupEventListeners() {
+            document.getElementById('btn-import').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const parsed = JSON.parse(event.target.result);
+                        if (parsed.categories && parsed.transactions) {
+                            localStorage.setItem('budget_categories', JSON.stringify(parsed.categories));
+                            localStorage.setItem('budget_transactions', JSON.stringify(parsed.transactions));
+                            if(parsed.gemini_key) localStorage.setItem('gemini_api_key', parsed.gemini_key);
+                            localStorage.setItem('budget_backup_needed', 'false');
+                            alert("Backup-Datei erfolgreich eingelesen!");
+                            loadAllData();
+                            loadApiKey();
+                            checkBackupStatus();
+                        } else {
+                            alert("Ungültiges Dateiformat.");
+                        }
+                    } catch(err) {
+                        alert("Fehler beim Lesen der Datei.");
+                    }
+                };
+                reader.readAsText(file);
+            });
+
             const btnVoice = document.getElementById('btn-voice');
             const statusText = document.getElementById('voice-status');
             const textInput = document.getElementById('text-input');
@@ -356,7 +443,8 @@
             document.getElementById('btn-current-month').addEventListener('click', () => {
                 selectedMonthStr = new Date().toISOString().slice(0, 7);
                 document.getElementById('month-select').value = selectedMonthStr;
-                loadAllData();
+                renderTransactionsList();
+                renderBudgetsOverview();
             });
 
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -385,7 +473,7 @@
                 btnVoice.addEventListener('touchstart', startRecording);
                 btnVoice.addEventListener('touchend', stopRecording);
             } else {
-                statusText.innerText = "Spracherkennung wird im Browser nicht unterstützt.";
+                statusText.innerText = "Spracherkennung wird nicht unterstützt.";
             }
 
             document.getElementById('btn-analyze').addEventListener('click', () => {
@@ -397,7 +485,6 @@
             document.getElementById('btn-save-key').addEventListener('click', () => {
                 localStorage.setItem('gemini_api_key', document.getElementById('gemini-key').value.trim());
                 alert("API-Key lokal gesichert!");
-                loadAllData();
             });
 
             document.getElementById('btn-save-ai').addEventListener('click', saveAiTransaction);
@@ -410,7 +497,6 @@
             document.getElementById('btn-send-chat').addEventListener('click', sendChatToAssistantDirectly);
         }
 
-        // DIREKTER KI-CALL VOM BROWSER AUS (Ersatz für Python Backend)
         async function analyzeTextWithGeminiDirectly() {
             const key = getApiKey();
             const text = document.getElementById('text-input').value.trim();
@@ -447,24 +533,26 @@
                 statusText.innerText = "Kategorisierung abgeschlossen.";
             } catch (err) {
                 console.error(err);
-                statusText.innerText = "Fehler bei der KI-Analyse (evtl. Limit erreicht).";
+                statusText.innerText = "Fehler bei der KI-Analyse.";
             }
         }
 
-        async function saveAiTransaction() {
+        function saveAiTransaction() {
             const today = new Date().toISOString().slice(0, 10);
             const targetDate = today.startsWith(selectedMonthStr) ? today : `${selectedMonthStr}-01`;
 
-            transactions.push({
-                id: Date.now(),
-                category_id: document.getElementById('val-category').value,
+            const newTx = {
+                id: Math.floor(Math.random() * 1000000000),
+                category_id: parseInt(document.getElementById('val-category').value),
                 vendor: document.getElementById('val-vendor').value,
                 amount: parseFloat(document.getElementById('val-amount').value),
                 date: targetDate,
                 month: selectedMonthStr
-            });
-            saveTransactions();
+            };
 
+            transactions.push(newTx);
+            windowSave();
+            
             document.getElementById('ai-validation-card').classList.add('hidden');
             document.getElementById('text-input').value = '';
             document.getElementById('voice-status').innerText = "Bereit...";
@@ -483,7 +571,7 @@
 
             let context = `Du bist ein präziser Schweizer Budget-Assistent. Hier sind die echten Live-Daten des Users für den Monat ${selectedMonthStr}:\n`;
             categories.forEach(c => {
-                const spent = transactions.filter(t => t.category_id == c.id && t.month === selectedMonthStr).reduce((sum, t) => sum + t.amount, 0);
+                const spent = transactions.filter(t => t.category_id == c.id && t.month === selectedMonthStr).reduce((sum, t) => sum + parseFloat(t.amount), 0);
                 const limit = c.budget_type === 2 ? c.total_limit / 12 : c.total_limit;
                 context += `- Kategorie: ${c.name} | Limit/Mt: ${limit.toFixed(2)} CHF | Ausgegeben: ${spent.toFixed(2)} CHF\n`;
             });
@@ -512,8 +600,9 @@
             const type = parseInt(document.getElementById('new-cat-type').value);
 
             if(name && !isNaN(limit)) {
-                categories.push({ id: Date.now(), name: name, total_limit: limit, budget_type: type });
-                saveCategories();
+                const newCat = { id: Math.floor(Math.random() * 1000000000), name: name, total_limit: limit, budget_type: type };
+                categories.push(newCat);
+                windowSave();
                 document.getElementById('new-cat-name').value = '';
                 document.getElementById('new-cat-limit').value = '';
                 loadAllData();
@@ -523,21 +612,34 @@
         window.editCategory = (id, currentLimit) => {
             const newLimit = prompt("Neues Limit für diese Kategorie eingeben (CHF):", currentLimit);
             if (newLimit !== null && !isNaN(newLimit) && newLimit.trim() !== "") {
-                const cat = categories.find(c => c.id == id);
-                if(cat) {
+                const cat = categories.find(c => c.id === id);
+                if (cat) {
                     cat.total_limit = parseFloat(newLimit);
-                    saveCategories();
+                    windowSave();
                     loadAllData();
                 }
             }
         }
 
-        window.deleteTx = (id) => { if(confirm("Löschen?")) { transactions = transactions.filter(t => t.id != id); saveTransactions(); loadAllData(); } }
-        window.deleteCategory = (id) => { if(confirm("Kategorie löschen?")) { categories = categories.filter(c => c.id != id); saveCategories(); loadAllData(); } }
+        window.deleteTx = (id) => { 
+            if(confirm("Löschen?")) { 
+                transactions = transactions.filter(t => t.id !== id);
+                windowSave();
+                loadAllData(); 
+            } 
+        }
+        
+        window.deleteCategory = (id) => { 
+            if(confirm("Kategorie löschen?")) { 
+                categories = categories.filter(c => c.id !== id);
+                windowSave();
+                loadAllData(); 
+            } 
+        }
 
         function renderCharts() {
             const months = [...new Set(transactions.map(t => t.month))].sort().slice(-6);
-            const totals = months.map(m => transactions.filter(t => t.month === m).reduce((sum, t) => sum + t.amount, 0));
+            const totals = months.map(m => transactions.filter(t => t.month === m).reduce((sum, t) => sum + parseFloat(t.amount), 0));
 
             const ctx = document.getElementById('chart-historie').getContext('2d');
             if(chartInstance) chartInstance.destroy();
