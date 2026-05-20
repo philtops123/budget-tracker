@@ -14,7 +14,7 @@
         body { -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
     </style>
 </head>
-<body class="bg-gray-100 h-full flex flex-col overflow-hidden text-gray-900 select-none">
+<body class="bg-gray-100 h-full flex flex-col overflow-hidden text-gray-900">
 
     <header class="bg-white border-b border-gray-200 pt-safe px-4 pb-3 flex justify-between items-center z-40 sticky top-0">
         <h1 id="view-title" class="text-xl font-bold tracking-tight">Übersicht</h1>
@@ -100,6 +100,7 @@
                     <option value="0">Monatliches Konsumbudget</option>
                     <option value="1">Monatlicher Dauerauftrag (Fixkosten Auto-Fill)</option>
                     <option value="2">Jahres-Rückstellung (Dauerauftrag Auto-Fill 1/12)</option>
+                    <option value="3">Flexibles Jahresbudget (Kein Auto-Fill, Ganzjahres-Tracking)</option>
                 </select>
                 <button id="btn-add-cat" class="w-full py-2.5 bg-blue-600 text-white font-semibold rounded-xl text-sm">Erstellen</button>
             </div>
@@ -133,7 +134,6 @@
                 </div>
             </div>
 
-            <!-- Dynamische Budget-Analyse-Meldungen -->
             <div id="stats-budget-alerts" class="space-y-2"></div>
 
             <div class="bg-white p-4 rounded-2xl border border-gray-200 space-y-3">
@@ -325,7 +325,7 @@
                     {id: "11", name: "Serafe", total_limit: 336.0, budget_type: 2},
                     {id: "12", name: "Skoda versicherung", total_limit: 528.0, budget_type: 2},
                     {id: "13", name: "Strassensteuer", total_limit: 552.0, budget_type: 2},
-                    {id: "14", name: "Ferien", total_limit: 4000.0, budget_type: 2},
+                    {id: "14", name: "Ferien", total_limit: 4000.0, budget_type: 3}, // Geändert auf Typ 3
                     {id: "15", name: "Einkäufe Nahrung u W.", total_limit: 1000.0, budget_type: 0},
                     {id: "16", name: "Essen auswärts", total_limit: 250.0, budget_type: 0},
                     {id: "17", name: "Freizeitaktivität", total_limit: 300.0, budget_type: 0},
@@ -352,7 +352,8 @@
             
             if (!hasAuto) {
                 localCats.forEach(cat => {
-                    if (cat.budget_type > 0) {
+                    // Typ 3 generiert KEINE automatischen Buchungen mehr
+                    if (cat.budget_type === 1 || cat.budget_type === 2) {
                         let amount = cat.budget_type === 1 ? cat.total_limit : cat.total_limit / 12.0;
                         localTxs.push({
                             id: crypto.randomUUID(),
@@ -391,7 +392,7 @@
             if(select) {
                 select.innerHTML = '';
                 categories
-                    .filter(c => c.budget_type === 0)
+                    .filter(c => c.budget_type === 0 || c.budget_type === 3) // Erlaubt Buchungen für Konsum und flexibles Jahresbudget
                     .sort((a,b) => a.name.localeCompare(b.name))
                     .forEach(c => {
                         let opt = document.createElement('option');
@@ -480,28 +481,43 @@
             let html0 = `<h3 class="text-sm font-bold text-blue-600 mb-2 pl-1">Monatliche Konsumbudgets</h3>`;
             let html1 = `<h3 class="text-sm font-bold text-emerald-600 mb-2 mt-4 pl-1">Monatliche Daueraufträge & Fixkosten</h3>`;
             let html2 = `<h3 class="text-sm font-bold text-amber-600 mb-2 mt-4 pl-1">Jahresdaueraufträge & Rückstellungen</h3>`;
+            let html3 = `<h3 class="text-sm font-bold text-indigo-600 mb-2 mt-4 pl-1">Flexible Jahresbudgets (z.B. Ferien)</h3>`;
             
-            let count0 = 0, count1 = 0, count2 = 0;
+            let count0 = 0, count1 = 0, count2 = 0, count3 = 0;
 
             categories.sort((a,b) => a.name.localeCompare(b.name)).forEach(c => {
                 let spent = 0;
                 let infoText = "";
                 let percent = 0;
                 
-                if (c.budget_type === 2) {
+                if (c.budget_type === 2 || c.budget_type === 3) {
+                    // Berechnung über das ganze Jahr
                     spent = allYearTxs.filter(t => String(t.category_id) === String(c.id)).reduce((sum, t) => sum + parseFloat(t.amount), 0);
                     percent = Math.min((spent / c.total_limit) * 100, 100);
-                    const monthlyShare = (c.total_limit / 12).toFixed(2);
-                    infoText = `<span class="font-bold text-gray-900">${spent.toFixed(2)}</span> / ${parseFloat(c.total_limit).toFixed(0)} CHF <span class="text-[10px] text-gray-400 block font-normal">Ziel: +${monthlyShare} CHF/Mt.</span>`;
+                    
+                    if (c.budget_type === 2) {
+                        const monthlyShare = (c.total_limit / 12).toFixed(2);
+                        infoText = `<span class="font-bold text-gray-900">${spent.toFixed(2)}</span> / ${parseFloat(c.total_limit).toFixed(0)} CHF <span class="text-[10px] text-gray-400 block font-normal">Ziel: +${monthlyShare} CHF/Mt.</span>`;
+                    } else {
+                        infoText = `<span class="font-bold text-gray-900">${spent.toFixed(2)}</span> / ${parseFloat(c.total_limit).toFixed(0)} CHF <span class="text-[10px] text-gray-400 block font-normal">Verfügbarer Jahrestopf</span>`;
+                    }
                 } else {
+                    // Berechnung für aktuellen Monat
                     spent = transactions.filter(t => String(t.category_id) === String(c.id) && t.month === selectedMonthStr).reduce((sum, t) => sum + parseFloat(t.amount), 0);
                     percent = Math.min((spent / c.total_limit) * 100, 100);
                     infoText = `<span class="font-bold text-gray-900">${spent.toFixed(2)}</span> / ${parseFloat(c.total_limit).toFixed(0)} CHF`;
+                    
+                    // NEU: Zeige das Jahrestotal für monatliche Budgets (Typ 0) als Kontext an
+                    if (c.budget_type === 0) {
+                        const yearSpent = allYearTxs.filter(t => String(t.category_id) === String(c.id)).reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                        infoText += `<span class="text-[10px] text-gray-400 block font-normal">Jahr gesamt: ${yearSpent.toFixed(2)} CHF</span>`;
+                    }
                 }
                 
                 let barColor = "bg-blue-600";
                 if(c.budget_type === 1) barColor = "bg-emerald-600";
                 if(c.budget_type === 2) barColor = "bg-amber-500";
+                if(c.budget_type === 3) barColor = "bg-indigo-600";
                 
                 const cardHtml = `
                     <div class="bg-white p-4 rounded-2xl border border-gray-100 space-y-1 text-sm shadow-2xs">
@@ -523,9 +539,10 @@
                 if(c.budget_type === 0) { html0 += cardHtml; count0++; }
                 if(c.budget_type === 1) { html1 += cardHtml; count1++; }
                 if(c.budget_type === 2) { html2 += cardHtml; count2++; }
+                if(c.budget_type === 3) { html3 += cardHtml; count3++; }
             });
             
-            container.innerHTML = (count0 ? html0 : "") + (count1 ? html1 : "") + (count2 ? html2 : "");
+            container.innerHTML = (count0 ? html0 : "") + (count1 ? html1 : "") + (count2 ? html2 : "") + (count3 ? html3 : "");
         }
 
         function setupEventListeners() {
@@ -618,11 +635,12 @@
             const cleanVendorKey = vendor.toLowerCase();
             let matchedCat = null;
 
-            const consumptionCats = categories.filter(c => c.budget_type === 0);
+            // Erlaubt jetzt Konsum- (0) und Jahres- (3) Kategorien für die Zuweisung
+            const assignableCats = categories.filter(c => c.budget_type === 0 || c.budget_type === 3);
 
             const learnedMappings = JSON.parse(localStorage.getItem('budget_learned_mappings')) || {};
             if (learnedMappings[cleanVendorKey]) {
-                const memoryMatch = consumptionCats.find(c => String(c.id) === String(learnedMappings[cleanVendorKey]));
+                const memoryMatch = assignableCats.find(c => String(c.id) === String(learnedMappings[cleanVendorKey]));
                 if (memoryMatch) matchedCat = memoryMatch;
             }
 
@@ -634,19 +652,20 @@
                     "freiz": ['mediamarkt', 'media markt', 'digitec', 'galaxus', 'interdiscount', 'fnac', 'kino', 'museum', 'konzert', 'sport', 'fitness', 'bouldern', 'klettern', 'ticket', 'sbb', 'zug', 'bahn', 'tram', 'bus', 'game', 'xbox', 'playstation', 'netflix', 'spotify', 'ausflug', 'ausflüge', 'trip', 'zoo', 'eintritt', 'aktivität'],
                     "kleid": ['h&m', 'zara', 'zalando', 'kleider', 'schuhe', 'mode', 'c&a', 'mango', 'nike', 'adidas'],
                     "gesund": ['arzt', 'apotheke', 'zahnarzt', 'medikament', 'spital', 'krank', 'physio', 'pille'],
-                    "abfall": ['abfall', 'entsorgung', 'gebührenmarke', 'kehrricht', 'sack', 'recycling', 'werkhof']
+                    "abfall": ['abfall', 'entsorgung', 'gebührenmarke', 'kehrricht', 'sack', 'recycling', 'werkhof'],
+                    "ferien": ['urlaub', 'hotel', 'flug', 'ferien', 'booking', 'airbnb', 'reise']
                 };
 
                 for (const [catKey, keywords] of Object.entries(mapping)) {
                     if (keywords.some(kw => lowerText.includes(kw))) {
-                        matchedCat = consumptionCats.find(c => c.name.toLowerCase().includes(catKey));
+                        matchedCat = assignableCats.find(c => c.name.toLowerCase().includes(catKey));
                         if (matchedCat) break;
                     }
                 }
             }
 
             if (!matchedCat) {
-                for (const cat of consumptionCats) {
+                for (const cat of assignableCats) {
                     if (lowerText.includes(cat.name.toLowerCase())) {
                         matchedCat = cat;
                         break;
@@ -655,9 +674,9 @@
             }
 
             if (!matchedCat) {
-                matchedCat = consumptionCats.find(c => c.name.toLowerCase().includes('nahrung')) || 
-                             consumptionCats.find(c => c.name.toLowerCase().includes('reserve')) || 
-                             consumptionCats[0];
+                matchedCat = assignableCats.find(c => c.name.toLowerCase().includes('nahrung')) || 
+                             assignableCats.find(c => c.name.toLowerCase().includes('reserve')) || 
+                             assignableCats[0];
             }
 
             document.getElementById('val-vendor').value = vendor;
@@ -667,8 +686,9 @@
             const aiCard = document.getElementById('ai-validation-card');
             aiCard.classList.remove('hidden');
             
+            // KORREKTUR: Scrollt präzise an das Ende des Elements, damit es auf dem iPhone ganz sichtbar ist
             setTimeout(() => {
-                aiCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                aiCard.scrollIntoView({ behavior: 'smooth', block: 'end' });
             }, 80);
 
             statusText.innerText = "Analyse abgeschlossen.";
@@ -717,8 +737,9 @@
             let context = `Du bist ein präziser Schweizer Budget-Assistent. Hier sind die echten Live-Daten des Users für den Monat ${selectedMonthStr}:\n`;
             categories.forEach(c => {
                 const spent = transactions.filter(t => String(t.category_id) === String(c.id) && t.month === selectedMonthStr).reduce((sum, t) => sum + parseFloat(t.amount), 0);
-                const limit = c.budget_type === 2 ? c.total_limit / 12 : c.total_limit;
-                context += `- Kategorie: ${c.name} | Limit/Mt: ${limit.toFixed(2)} CHF | Ausgegeben: ${spent.toFixed(2)} CHF\n`;
+                let limit = c.total_limit;
+                if (c.budget_type === 2) limit = c.total_limit / 12;
+                context += `- Kategorie: ${c.name} | Typ: ${c.budget_type} | Limit: ${limit.toFixed(2)} CHF | Ausgegeben diesen Monat: ${spent.toFixed(2)} CHF\n`;
             });
             context += `\nBeantworte die Frage kurz und präzise basierend auf diesen Daten:\n"${q}"`;
 
