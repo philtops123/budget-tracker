@@ -58,7 +58,7 @@
                 <button id="btn-analyze" class="w-full py-3 bg-blue-600 active:bg-blue-700 text-white font-semibold rounded-xl text-sm shadow-xs">Text analysieren</button>
             </div>
 
-            <div id="ai-validation-card" class="bg-amber-50 border border-amber-200 p-4 rounded-2xl space-y-3 hidden">
+            <div id="ai-validation-card" class="bg-amber-50 border border-amber-200 p-4 rounded-2xl space-y-3 hidden scroll-mt-4">
                 <div class="flex justify-between items-center">
                     <h3 class="text-sm font-bold text-amber-800">Vorschlag (Lernender Algorithmus)</h3>
                     <span class="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-semibold">Prüfen</span>
@@ -118,16 +118,26 @@
         </section>
 
         <section id="tab-stats" class="tab-content space-y-4 hidden">
-            <div class="bg-white p-4 rounded-2xl border border-gray-200 flex flex-col items-center">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider self-start mb-4">Verteilung nach Kategorien</h3>
-                <div class="w-full h-56 relative flex justify-center">
-                    <canvas id="chart-kategorien"></canvas>
+            <div class="grid grid-cols-2 gap-2">
+                <div class="bg-white p-3 rounded-xl border border-gray-200 text-center">
+                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Gesamtausgaben</span>
+                    <p id="stats-total-spent" class="text-sm font-bold text-gray-700">0.00 CHF</p>
+                </div>
+                <div class="bg-white p-3 rounded-xl border border-gray-200 text-center">
+                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Fixkosten-Anteil</span>
+                    <p id="stats-fix-spent" class="text-sm font-medium text-gray-500">0.00 CHF</p>
                 </div>
             </div>
-            <div class="bg-white p-4 rounded-2xl border border-gray-200">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Ausgaben-Verlauf (6 Monate)</h3>
-                <div class="w-full h-48">
-                    <canvas id="chart-historie"></canvas>
+
+            <div class="bg-white p-4 rounded-2xl border border-gray-200 space-y-3">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Spezielle / Höchste variable Ausgaben</h3>
+                <div id="stats-top-expenses" class="space-y-2"></div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border border-gray-200 flex flex-col items-center">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider self-start mb-4">Verteilung variable Ausgaben</h3>
+                <div class="w-full h-48 relative flex justify-center">
+                    <canvas id="chart-kategorien"></canvas>
                 </div>
             </div>
         </section>
@@ -170,7 +180,6 @@
     <script>
         let categories = [];
         let transactions = [];
-        let chartHistorieInstance = null;
         let chartKategorienInstance = null;
         let selectedMonthStr = new Date().toISOString().slice(0, 7);
         let recognition = null;
@@ -293,7 +302,7 @@
                     {id: "1", name: "Miete", total_limit: 1300.0, budget_type: 1},
                     {id: "2", name: "Hausratversicherung", total_limit: 15.60, budget_type: 1},
                     {id: "3", name: "Krankenkasse", total_limit: 650.0, budget_type: 1},
-                    {id: "4", name: "Skoda tank", total_limit: 130.0, budget_type: 1},
+                    {id: "4", name: "Skoda tank", total_limit: 130.0, budget_type: 0},
                     {id: "5", name: "Autorückstellung", total_limit: 200.0, budget_type: 1},
                     {id: "6", name: "Abos", total_limit: 32.0, budget_type: 1},
                     {id: "7", name: "Internet", total_limit: 22.0, budget_type: 1},
@@ -368,11 +377,14 @@
             const select = document.getElementById('val-category');
             if(select) {
                 select.innerHTML = '';
-                categories.sort((a,b) => a.name.localeCompare(b.name)).forEach(c => {
-                    let opt = document.createElement('option');
-                    opt.value = c.id; opt.innerText = c.name;
-                    select.appendChild(opt);
-                });
+                categories
+                    .filter(c => c.budget_type === 0)
+                    .sort((a,b) => a.name.localeCompare(b.name))
+                    .forEach(c => {
+                        let opt = document.createElement('option');
+                        opt.value = c.id; opt.innerText = c.name;
+                        select.appendChild(opt);
+                    });
             }
         }
 
@@ -584,9 +596,11 @@
             const cleanVendorKey = vendor.toLowerCase();
             let matchedCat = null;
 
+            const consumptionCats = categories.filter(c => c.budget_type === 0);
+
             const learnedMappings = JSON.parse(localStorage.getItem('budget_learned_mappings')) || {};
             if (learnedMappings[cleanVendorKey]) {
-                const memoryMatch = categories.find(c => String(c.id) === String(learnedMappings[cleanVendorKey]));
+                const memoryMatch = consumptionCats.find(c => String(c.id) === String(learnedMappings[cleanVendorKey]));
                 if (memoryMatch) matchedCat = memoryMatch;
             }
 
@@ -594,7 +608,7 @@
                 const mapping = {
                     "nahr": ['coop', 'migros', 'denner', 'aldi', 'lidl', 'spar', 'manor', 'bäckerei', 'beck', 'metzgerei', 'volg', 'lebensmittel', 'brot', 'milch'],
                     "ausw": ['restaurant', 'bar', 'café', 'cafe', 'pub', 'bier', 'mcdonald', 'burger', 'pizza', 'kebab', 'sushi', 'takeaway', 'starbucks', 'döner', 'bistro', 'essen'],
-                    "tank": ['tanken', 'benzin', 'diesel', 'shell', 'socar', 'bp', 'avia', 'migrol', 'tankstelle'],
+                    "tank": ['tanken', 'benzin', 'diesel', 'shell', 'socar', 'bp', 'avia', 'migrol', 'tankstelle', 'skoda'],
                     "freiz": ['mediamarkt', 'media markt', 'digitec', 'galaxus', 'interdiscount', 'fnac', 'kino', 'museum', 'konzert', 'sport', 'fitness', 'bouldern', 'klettern', 'ticket', 'sbb', 'zug', 'bahn', 'tram', 'bus', 'game', 'xbox', 'playstation', 'netflix', 'spotify'],
                     "kleid": ['h&m', 'zara', 'zalando', 'kleider', 'schuhe', 'mode', 'c&a', 'mango', 'nike', 'adidas'],
                     "gesund": ['arzt', 'apotheke', 'zahnarzt', 'medikament', 'spital', 'krank', 'physio', 'pille'],
@@ -603,14 +617,14 @@
 
                 for (const [catKey, keywords] of Object.entries(mapping)) {
                     if (keywords.some(kw => lowerText.includes(kw))) {
-                        matchedCat = categories.find(c => c.name.toLowerCase().includes(catKey));
+                        matchedCat = consumptionCats.find(c => c.name.toLowerCase().includes(catKey));
                         if (matchedCat) break;
                     }
                 }
             }
 
             if (!matchedCat) {
-                for (const cat of categories) {
+                for (const cat of consumptionCats) {
                     if (lowerText.includes(cat.name.toLowerCase())) {
                         matchedCat = cat;
                         break;
@@ -619,17 +633,18 @@
             }
 
             if (!matchedCat) {
-                matchedCat = categories.find(c => c.name.toLowerCase().includes('reserve')) || 
-                             categories.find(c => c.name.toLowerCase().includes('nahrung')) || 
-                             categories.find(c => c.budget_type === 0) || 
-                             categories[0];
+                matchedCat = consumptionCats.find(c => c.name.toLowerCase().includes('reserve')) || 
+                             consumptionCats.find(c => c.name.toLowerCase().includes('nahrung')) || 
+                             consumptionCats[0];
             }
 
             document.getElementById('val-vendor').value = vendor;
             document.getElementById('val-amount').value = amount;
             if (matchedCat) document.getElementById('val-category').value = matchedCat.id;
 
-            document.getElementById('ai-validation-card').classList.remove('hidden');
+            const aiCard = document.getElementById('ai-validation-card');
+            aiCard.classList.remove('hidden');
+            aiCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             statusText.innerText = "Analyse abgeschlossen.";
         }
 
@@ -743,13 +758,48 @@
 
         function renderCharts() {
             const currentMonthTxs = transactions.filter(t => t.month === selectedMonthStr);
+            let totalSpent = 0;
+            let fixSpent = 0;
             const catSums = {};
             
             currentMonthTxs.forEach(t => {
-                const cat = categories.find(c => String(c.id) === String(t.category_id));
-                const name = cat ? cat.name : "Unbekannt";
-                catSums[name] = (catSums[name] || 0) + parseFloat(t.amount);
+                const amt = parseFloat(t.amount);
+                totalSpent += amt;
+                
+                if (t.vendor.startsWith("Automatisch:")) {
+                    fixSpent += amt;
+                } else {
+                    const cat = categories.find(c => String(c.id) === String(t.category_id));
+                    const name = cat ? cat.name : "Unbekannt";
+                    catSums[name] = (catSums[name] || 0) + amt;
+                }
             });
+
+            document.getElementById('stats-total-spent').innerText = `${totalSpent.toFixed(2)} CHF`;
+            document.getElementById('stats-fix-spent').innerText = `${fixSpent.toFixed(2)} CHF`;
+
+            const manualTxs = currentMonthTxs
+                .filter(t => !t.vendor.startsWith("Automatisch:"))
+                .sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount))
+                .slice(0, 4);
+
+            const topContainer = document.getElementById('stats-top-expenses');
+            topContainer.innerHTML = '';
+            if (manualTxs.length === 0) {
+                topContainer.innerHTML = '<p class="text-xs text-gray-400 italic p-1">Keine variablen Ausgaben erfasst.</p>';
+            } else {
+                manualTxs.forEach(t => {
+                    const cat = categories.find(c => String(c.id) === String(t.category_id));
+                    topContainer.innerHTML += `
+                        <div class="flex justify-between items-center p-2.5 bg-gray-50 rounded-xl text-xs border border-gray-100">
+                            <div>
+                                <p class="font-semibold text-gray-700">${t.vendor}</p>
+                                <p class="text-[10px] text-gray-400">${t.date} · ${cat ? cat.name : 'Allgemein'}</p>
+                            </div>
+                            <span class="font-bold text-gray-900">-${parseFloat(t.amount).toFixed(2)} CHF</span>
+                        </div>`;
+                });
+            }
 
             const katLabels = Object.keys(catSums);
             const katData = Object.values(catSums);
@@ -776,35 +826,10 @@
                     plugins: {
                         legend: {
                             display: true,
-                            position: 'right',
-                            labels: { boxWidth: 12, font: { size: 10 } }
+                            position: 'bottom',
+                            labels: { boxWidth: 10, font: { size: 10 } }
                         }
                     }
-                }
-            });
-
-            const months = [...new Set(transactions.map(t => t.month))].sort().slice(-6);
-            const totals = months.map(m => transactions.filter(t => m === t.month).reduce((sum, t) => sum + parseFloat(t.amount), 0));
-
-            const ctxHist = document.getElementById('chart-historie').getContext('2d');
-            if(chartHistorieInstance) chartHistorieInstance.destroy();
-            
-            chartHistorieInstance = new Chart(ctxHist, {
-                type: 'bar',
-                data: {
-                    labels: months,
-                    datasets: [{ 
-                        label: 'Gesamtausgaben (CHF)', 
-                        data: totals, 
-                        backgroundColor: '#3b82f6',
-                        borderRadius: 6
-                    }]
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
                 }
             });
         }
