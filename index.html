@@ -119,18 +119,25 @@
 
         <section id="tab-stats" class="tab-content space-y-4 hidden">
             <div class="grid grid-cols-2 gap-2">
-                <div class="bg-white p-3 rounded-xl border border-gray-200 text-center">
-                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Gesamtausgaben</span>
-                    <p id="stats-total-spent" class="text-sm font-bold text-gray-700">0.00 CHF</p>
+                <div class="bg-white p-3 rounded-xl border border-gray-200 text-center col-span-2">
+                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Gesamtausgaben (Monat)</span>
+                    <p id="stats-total-spent" class="text-base font-bold text-gray-800">0.00 CHF</p>
                 </div>
                 <div class="bg-white p-3 rounded-xl border border-gray-200 text-center">
-                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Fixkosten-Anteil</span>
+                    <span class="text-[10px] text-blue-500 font-bold uppercase tracking-wider">Variable Ausgaben</span>
+                    <p id="stats-var-spent" class="text-sm font-bold text-blue-600">0.00 CHF</p>
+                </div>
+                <div class="bg-white p-3 rounded-xl border border-gray-200 text-center">
+                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Fixkosten (Auto)</span>
                     <p id="stats-fix-spent" class="text-sm font-medium text-gray-500">0.00 CHF</p>
                 </div>
             </div>
 
+            <!-- Dynamische Budget-Analyse-Meldungen -->
+            <div id="stats-budget-alerts" class="space-y-2"></div>
+
             <div class="bg-white p-4 rounded-2xl border border-gray-200 space-y-3">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Spezielle / Höchste variable Ausgaben</h3>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Höchste variable Einzelposten</h3>
                 <div id="stats-top-expenses" class="space-y-2"></div>
             </div>
 
@@ -577,7 +584,6 @@
             let amount = 0.00;
             let vendor = text;
 
-            // Betrag präzise finden und exakt ausschneiden (verhindert Verkrüppelung des Strings)
             const priceRegex = /\d+([.,]\d+)?/;
             const match = text.match(priceRegex);
             if (match) {
@@ -585,7 +591,6 @@
                 vendor = text.replace(match[0], '');
             }
 
-            // Zweck / Händler sauber bereinigen
             vendor = vendor.replace(/chf|franken|fr\.|fr|ch/i, '')
                            .replace(/^bei|^im|^in|^vom|^am/i, '')
                            .replace(/^\d+\s*x|^\d+\s*packung(en)?/i, '')
@@ -647,7 +652,6 @@
             const aiCard = document.getElementById('ai-validation-card');
             aiCard.classList.remove('hidden');
             
-            // Verzögerter iOS-Zentrierungs-Scroll
             setTimeout(() => {
                 aiCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 80);
@@ -767,8 +771,10 @@
             const currentMonthTxs = transactions.filter(t => t.month === selectedMonthStr);
             let totalSpent = 0;
             let fixSpent = 0;
+            let varSpent = 0;
             const catSums = {};
             
+            // 1. Ausgabenberechnung
             currentMonthTxs.forEach(t => {
                 const amt = parseFloat(t.amount);
                 totalSpent += amt;
@@ -776,6 +782,7 @@
                 if (t.vendor.startsWith("Automatisch:")) {
                     fixSpent += amt;
                 } else {
+                    varSpent += amt;
                     const cat = categories.find(c => String(c.id) === String(t.category_id));
                     const name = cat ? cat.name : "Unbekannt";
                     catSums[name] = (catSums[name] || 0) + amt;
@@ -784,7 +791,65 @@
 
             document.getElementById('stats-total-spent').innerText = `${totalSpent.toFixed(2)} CHF`;
             document.getElementById('stats-fix-spent').innerText = `${fixSpent.toFixed(2)} CHF`;
+            document.getElementById('stats-var-spent').innerText = `${varSpent.toFixed(2)} CHF`;
 
+            // 2. Dynamische Budget-Analyse (Überreizt vs. Zu viel budgetiert)
+            const alertContainer = document.getElementById('stats-budget-alerts');
+            alertContainer.innerHTML = '';
+            
+            let overdrawnHtml = '';
+            let overbudgetedHtml = '';
+
+            categories.forEach(c => {
+                // Nur Konsumbudgets (budget_type === 0) prüfen
+                if (c.budget_type === 0) {
+                    const spent = currentMonthTxs
+                        .filter(t => String(t.category_id) === String(c.id))
+                        .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                    
+                    const limit = parseFloat(c.total_limit);
+                    const diff = limit - spent;
+
+                    if (spent > limit) {
+                        // Überreizt
+                        overdrawnHtml += `
+                            <div class="flex justify-between items-center p-3 bg-red-50 text-red-800 rounded-xl text-xs border border-red-200">
+                                <div>
+                                    <p class="font-bold uppercase tracking-wide text-[10px] text-red-500">🔴 Überreizt</p>
+                                    <p class="font-semibold text-sm">${c.name}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-bold">+${Math.abs(diff).toFixed(2)} CHF</p>
+                                    <p class="text-[10px] text-gray-400">Limit: ${limit.toFixed(0)}</p>
+                                </div>
+                            </div>`;
+                    } else if (spent > 0 && diff > (limit * 0.4)) {
+                        // Zu viel budgetiert (Mehr als 40% des Budgets übrig)
+                        overbudgetedHtml += `
+                            <div class="flex justify-between items-center p-3 bg-emerald-50 text-emerald-800 rounded-xl text-xs border border-emerald-200">
+                                <div>
+                                    <p class="font-bold uppercase tracking-wide text-[10px] text-emerald-500">🟢 Sparpotenzial</p>
+                                    <p class="font-semibold text-sm">${c.name}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-bold">${diff.toFixed(2)} CHF übrig</p>
+                                    <p class="text-[10px] text-gray-400">Genutzt: ${((spent/limit)*100).toFixed(0)}%</p>
+                                </div>
+                            </div>`;
+                    }
+                }
+            });
+
+            if (overdrawnHtml || overbudgetedHtml) {
+                alertContainer.innerHTML = `
+                    <div class="space-y-2">
+                        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider pl-1">Budget-Analyse</h4>
+                        ${overdrawnHtml}
+                        ${overbudgetedHtml}
+                    </div>`;
+            }
+
+            // 3. Höchste Einzelposten
             const manualTxs = currentMonthTxs
                 .filter(t => !t.vendor.startsWith("Automatisch:"))
                 .sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount))
@@ -808,6 +873,7 @@
                 });
             }
 
+            // 4. Chart generation
             const katLabels = Object.keys(catSums);
             const katData = Object.values(catSums);
 
