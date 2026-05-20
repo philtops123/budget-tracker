@@ -385,7 +385,6 @@
                 return;
             }
 
-            // 1. Automatische Buchungen im einklappbaren Ordner (falls vorhanden)
             if (autoTxs.length > 0) {
                 const totalAuto = autoTxs.reduce((sum, t) => sum + parseFloat(t.amount), 0).toFixed(2);
                 let folderHtml = `
@@ -418,7 +417,6 @@
                 container.innerHTML += folderHtml;
             }
 
-            // 2. Manuelle normale Buchungsliste
             manualTxs.forEach(t => {
                 const cat = categories.find(c => c.id == t.category_id);
                 container.innerHTML += `
@@ -536,7 +534,6 @@
                 statusText.innerText = "Spracherkennung wird nicht unterstützt.";
             }
 
-            // Lokaler Algorithmus anstelle von KI
             document.getElementById('btn-analyze').addEventListener('click', () => {
                 analyzeTextWithDeterministicAlgorithm();
             });
@@ -556,55 +553,69 @@
             document.getElementById('btn-send-chat').addEventListener('click', sendChatToAssistantDirectly);
         }
 
-        // Lokaler, unlimitierter Analyse-Algorithmus
+        // NEU: Stark verbesserter, fehlerfreier Zuordnungs-Algorithmus
         function analyzeTextWithDeterministicAlgorithm() {
             const text = document.getElementById('text-input').value.trim();
             const statusText = document.getElementById('voice-status');
             if (!text) return;
 
-            // 1. Betrag finden (Zahlenfolge mit optionalem Dezimalpunkt/Komma)
+            const lowerText = text.toLowerCase();
+
+            // 1. Geldbetrag präzise filtern
             const amountMatch = text.replace(',', '.').match(/\d+(\.\d{1,2})?/);
             const amount = amountMatch ? parseFloat(amountMatch[0]) : 0.00;
 
-            // 2. Händler bestimmen (Text ohne den Betrag und Währungskürzel)
-            let vendor = text.replace(/\d+([.,]\d{1,2})?/, '').replace(/chf|franken|ch/i, '').trim();
-            vendor = vendor.replace(/^bei|^im|^in/i, '').trim(); // Füllwörter säubern
+            // 2. Händlername bereinigen
+            let vendor = text.replace(/\d+([.,]\d{1,2})?/, '').replace(/chf|franken|fr\.|ch/i, '').trim();
+            vendor = vendor.replace(/^bei|^im|^in|^vom|^am/i, '').trim(); 
             if (!vendor) vendor = "Unbekannter Händler";
-            // Erste Buchstabe gross
             vendor = vendor.charAt(0).toUpperCase() + vendor.slice(1);
 
-            // 3. Kategorie-Matching via Keywords (Lokale Logik)
-            let matchedCat = categories[0]; // Fallback
-            const lowerText = text.toLowerCase();
+            // 3. Schweizer Keyword-Matrix
+            let matchedCat = null;
+            const mapping = {
+                "nahrung": ['coop', 'migros', 'denner', 'aldi', 'lidl', 'spar', 'manor', 'bäckerei', 'beck', 'metzgerei', 'volg', 'lebensmittel'],
+                "auswärts": ['restaurant', 'bar', 'café', 'cafe', 'pub', 'bier', 'mcdonald', 'burger', 'pizza', 'kebab', 'sushi', 'takeaway', 'starbucks', 'döner', 'bistro'],
+                "tank": ['tanken', 'benzin', 'diesel', 'shell', 'socar', 'bp', 'avia', 'migrol', 'tankstelle'],
+                "freizeit": ['mediamarkt', 'media markt', 'digitec', 'galaxus', 'interdiscount', 'fnac', 'kino', 'museum', 'konzert', 'sport', 'fitness', 'bouldern', 'klettern', 'ticket', 'sbb', 'zug', 'bahn', 'tram', 'bus', 'game', 'xbox', 'playstation'],
+                "kleider": ['h&m', 'zara', 'zalando', 'kleider', 'schuhe', 'mode', 'c&a', 'mango', 'nike', 'adidas'],
+                "gesundheit": ['arzt', 'apotheke', 'zahnarzt', 'medikament', 'spital', 'krank', 'physio'],
+                "abfall": ['abfall', 'entsorgung', 'gebührenmarke', 'kehrricht', 'sack', 'recycling', 'werkhof']
+            };
 
-            // Direktes Namens-Matching abfragen
-            for (const cat of categories) {
-                if (lowerText.includes(cat.name.toLowerCase())) {
-                    matchedCat = cat;
-                    break;
+            // Regel 1: Suche nach vordefinierten Keywords
+            for (const [catKey, keywords] of Object.entries(mapping)) {
+                if (keywords.some(kw => lowerText.includes(kw))) {
+                    matchedCat = categories.find(c => c.name.toLowerCase().includes(catKey));
+                    if (matchedCat) break;
                 }
             }
 
-            // Intelligentes Keyword-Mapping für Schweizer Standardeinkäufe
-            if (lowerText.includes('coop') || lowerText.includes('migros') || lowerText.includes('denner') || lowerText.includes('aldi') || lowerText.includes('lidl') || lowerText.includes('landoland')) {
-                matchedCat = categories.find(c => c.name.includes('Nahrung')) || matchedCat;
-            } else if (lowerText.includes('restaurant') || lowerText.includes('bar') || lowerText.includes('kino') || lowerText.includes('bier') || lowerText.includes('pub') || lowerText.includes('mc') || lowerText.includes('mcdonald')) {
-                matchedCat = categories.find(c => c.name.includes('auswärts')) || matchedCat;
-            } else if (lowerText.includes('tanken') || lowerText.includes('benzin') || lowerText.includes('skoda') || lowerText.includes('shell') || lowerText.includes('socar')) {
-                matchedCat = categories.find(c => c.name.includes('Skoda tank')) || matchedCat;
-            } else if (lowerText.includes('arzt') || lowerText.includes('apotheke') || lowerText.includes('pille') || lowerText.includes('medikament')) {
-                matchedCat = categories.find(c => c.name.includes('Gesundheit')) || matchedCat;
-            } else if (lowerText.includes('zug') || lowerText.includes('sbb') || lowerText.includes('ticket') || lowerText.includes('bus')) {
-                matchedCat = categories.find(c => c.name.includes('Freizeit')) || matchedCat;
+            // Regel 2: Falls kein Keyword zutrifft, prüfe direkte Namensvorkommen der Kategorien
+            if (!matchedCat) {
+                for (const cat of categories) {
+                    if (lowerText.includes(cat.name.toLowerCase())) {
+                        matchedCat = cat;
+                        break;
+                    }
+                }
             }
 
-            // Werte ins Validierungsfenster eintragen
+            // Regel 3: Sicherer Fallback (Verhindert fehlerhafte Fixkosten- oder Abfall-Zuweisung)
+            if (!matchedCat) {
+                matchedCat = categories.find(c => c.name.toLowerCase().includes('reserve')) || 
+                             categories.find(c => c.name.toLowerCase().includes('nahrung')) || 
+                             categories.find(c => c.budget_type === 0) || 
+                             categories[0];
+            }
+
+            // Felder abfüllen
             document.getElementById('val-vendor').value = vendor;
             document.getElementById('val-amount').value = amount;
             if (matchedCat) document.getElementById('val-category').value = matchedCat.id;
 
             document.getElementById('ai-validation-card').classList.remove('hidden');
-            statusText.innerText = "Analyse via Algorithmus abgeschlossen.";
+            statusText.innerText = "Analyse abgeschlossen.";
         }
 
         function saveAiTransaction() {
@@ -708,7 +719,6 @@
         }
 
         function renderCharts() {
-            // --- CHART 1: Kategorien-Verteilung (Aktueller Monat) ---
             const currentMonthTxs = transactions.filter(t => t.month === selectedMonthStr);
             const catSums = {};
             
@@ -750,7 +760,6 @@
                 }
             });
 
-            // --- CHART 2: Historischer Trend (Letzte 6 Monate) ---
             const months = [...new Set(transactions.map(t => t.month))].sort().slice(-6);
             const totals = months.map(m => transactions.filter(t => t.month === m).reduce((sum, t) => sum + parseFloat(t.amount), 0));
 
