@@ -58,7 +58,7 @@
                 <button id="btn-analyze" class="w-full py-3 bg-blue-600 active:bg-blue-700 text-white font-semibold rounded-xl text-sm shadow-xs">Text analysieren</button>
             </div>
 
-            <div id="ai-validation-card" class="bg-amber-50 border border-amber-200 p-4 rounded-2xl space-y-3 hidden scroll-mt-4">
+            <div id="ai-validation-card" class="bg-amber-50 border border-amber-200 p-4 rounded-2xl space-y-3 hidden">
                 <div class="flex justify-between items-center">
                     <h3 class="text-sm font-bold text-amber-800">Vorschlag (Lernender Algorithmus)</h3>
                     <span class="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-semibold">Prüfen</span>
@@ -644,7 +644,12 @@
 
             const aiCard = document.getElementById('ai-validation-card');
             aiCard.classList.remove('hidden');
-            aiCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            
+            // Fix für iOS Viewport-Rendering-Verzögerung
+            setTimeout(() => {
+                aiCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 80);
+
             statusText.innerText = "Analyse abgeschlossen.";
         }
 
