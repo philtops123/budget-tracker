@@ -2,11 +2,9 @@
 <html lang="de" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <!-- FIX: Viewport-Beschränkung entfernt, um iOS-Crash zu verhindern -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Budget Tracker Local</title>
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- Standalone-Modus entfernt, um den iOS-Tastatur-Bug komplett zu umgehen -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -14,12 +12,8 @@
         .pt-safe { padding-top: max(1rem, env(safe-area-inset-top)); }
         body { -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
         
-        /* FIX: Mindestens 16px erzwingen verhindert den blockierenden iOS-Zoom-Bug */
         input, textarea, select {
-            -webkit-user-select: text !important;
-            user-select: text !important;
-            pointer-events: auto !important;
-            font-size: 16px !important; 
+            font-size: 16px !important; /* Verhindert ungewollten iOS-Zoom */
         }
     </style>
 </head>
@@ -209,21 +203,7 @@
             loadAllData();
             setupEventListeners();
             checkBackupStatus();
-            initIosPwaFocusFix();
         });
-
-        // KORREKTUR: Fängt Touches ab und zwingt iOS im PWA-Modus, das Feld nativ zu fokussieren
-        function initIosPwaFocusFix() {
-            const forceFocus = (e) => {
-                const target = e.target.closest('input, textarea, select');
-                if (target) {
-                    e.stopPropagation();
-                    target.focus();
-                }
-            };
-            document.addEventListener('touchstart', forceFocus, {passive: true});
-            document.addEventListener('touchend', forceFocus, {passive: true});
-        }
 
         function changeMade() {
             localStorage.setItem('budget_backup_needed', 'true');
