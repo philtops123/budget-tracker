@@ -12,16 +12,17 @@
         .pb-safe { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
         .pt-safe { padding-top: max(1rem, env(safe-area-inset-top)); }
         body { -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-        /* Erzwingt Textfokus im iOS Standalone Modus */
-        input, textarea {
+        
+        /* Absolute Priorität für die Interaktion mit Formularelementen im iOS-Home-Screen-Modhms */
+        input, textarea, select {
             -webkit-user-select: text !important;
             user-select: text !important;
+            pointer-events: auto !important;
         }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-900 antialiased">
 
-    <!-- Header fixiert gegen iOS-Tastatur-Bug -->
     <header class="bg-white border-b border-gray-200 pt-safe px-4 pb-3 flex justify-between items-center z-40 fixed top-0 left-0 right-0 shadow-xs">
         <h1 id="view-title" class="text-xl font-bold tracking-tight">Übersicht</h1>
         <div class="flex items-center space-x-2">
@@ -30,7 +31,6 @@
         </div>
     </header>
 
-    <!-- Inhalt mit ausreichend Abstand für Header und Navigation -->
     <main class="px-4 pt-24 pb-36 min-h-screen">
         <section id="tab-tracker" class="tab-content space-y-4">
             
@@ -166,7 +166,6 @@
         </section>
     </main>
 
-    <!-- Navigation bleibt fixiert am Boden -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe shadow-xl z-50">
         <div class="flex justify-around items-center h-16 text-[10px] font-semibold text-gray-400">
             <button onclick="switchTab('tracker', 'Übersicht')" class="nav-btn flex flex-col items-center justify-center w-full h-full text-blue-600" data-tab="tracker">
@@ -208,7 +207,26 @@
             loadAllData();
             setupEventListeners();
             checkBackupStatus();
+            initIosPwaFocusFix(); // Aktiviert den iOS Tastatur Fix
         });
+
+        // BULLETPROOF FIX FÜR IOS HOME-SCREEN TASTATUR BUG
+        function initIosPwaFocusFix() {
+            document.addEventListener('touchstart', (e) => {
+                const target = e.target.closest('input, textarea, select');
+                if (target) {
+                    e.stopPropagation(); // Verhindert, dass iOS-Gesten das Event abfangen
+                }
+            }, {passive: true});
+
+            document.addEventListener('touchend', (e) => {
+                const target = e.target.closest('input, textarea, select');
+                // Wenn ein Feld angetippt wird, erzwinge den System-Fokus direkt über JS
+                if (target && document.activeElement !== target) {
+                    target.focus();
+                }
+            });
+        }
 
         function changeMade() {
             localStorage.setItem('budget_backup_needed', 'true');
@@ -387,7 +405,7 @@
             if(activeBtn) activeBtn.classList.add('text-blue-600');
             if(tabId === 'stats') renderCharts();
             
-            window.scrollTo(0, 0); // Verhindert Ansichtsfehler beim Tab-Wechsel unter iOS
+            window.scrollTo(0, 0);
         }
 
         function loadApiKey() {
