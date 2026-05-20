@@ -2,7 +2,8 @@
 <html lang="de" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- FIX: Viewport-Beschränkung entfernt, um iOS-Crash zu verhindern -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Budget Tracker Local</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,11 +14,12 @@
         .pt-safe { padding-top: max(1rem, env(safe-area-inset-top)); }
         body { -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
         
-        /* Absolute Priorität für die Interaktion mit Formularelementen im iOS-Home-Screen-Modhms */
+        /* FIX: Mindestens 16px erzwingen verhindert den blockierenden iOS-Zoom-Bug */
         input, textarea, select {
             -webkit-user-select: text !important;
             user-select: text !important;
             pointer-events: auto !important;
+            font-size: 16px !important; 
         }
     </style>
 </head>
@@ -61,7 +63,7 @@
                     </button>
                 </div>
                 <p id="voice-status" class="text-xs text-gray-400 italic">Bereit...</p>
-                <textarea id="text-input" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-hidden" rows="2" placeholder="Text eingeben (z.B. Coop 23.50)..."></textarea>
+                <textarea id="text-input" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-hidden" rows="2" placeholder="Text eingeben (z.B. Coop 23.50)..."></textarea>
                 <button id="btn-analyze" class="w-full py-3 bg-blue-600 active:bg-blue-700 text-white font-semibold rounded-xl text-sm shadow-xs">Text analysieren</button>
             </div>
 
@@ -82,7 +84,7 @@
                 </div>
                 <div>
                     <label class="text-xs text-amber-700 block mb-0.5">Kategorie manuell ändern:</label>
-                    <select id="val-category" class="w-full p-2.5 bg-white border border-amber-300 rounded-xl text-sm focus:outline-hidden"></select>
+                    <select id="val-category" class="w-full p-2.5 bg-white border border-amber-300 rounded-xl focus:outline-hidden"></select>
                 </div>
                 <div class="flex space-x-2 pt-1">
                     <button id="btn-save-ai" class="flex-1 py-3 bg-emerald-600 text-white font-semibold rounded-xl text-sm shadow-xs">Buchung speichern</button>
@@ -101,9 +103,9 @@
             
             <div class="bg-white p-4 rounded-2xl border border-gray-200 space-y-3 mt-6">
                 <h3 class="text-sm font-bold text-gray-700">Neue Kategorie hinzufügen</h3>
-                <input id="new-cat-name" type="text" placeholder="Kategoriename" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm">
-                <input id="new-cat-limit" type="number" placeholder="Limit (CHF)" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm">
-                <select id="new-cat-type" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm">
+                <input id="new-cat-name" type="text" placeholder="Kategoriename" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl">
+                <input id="new-cat-limit" type="number" placeholder="Limit (CHF)" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl">
+                <select id="new-cat-type" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl">
                     <option value="0">Monatliches Konsumbudget</option>
                     <option value="1">Monatlicher Dauerauftrag (Fixkosten Auto-Fill)</option>
                     <option value="2">Jahres-Rückstellung (Dauerauftrag Auto-Fill 1/12)</option>
@@ -120,7 +122,7 @@
                 </div>
             </div>
             <div class="flex space-x-2 mt-2">
-                <input id="chat-input" type="text" placeholder="Frage an den Assistenten..." class="flex-1 p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-hidden">
+                <input id="chat-input" type="text" placeholder="Frage an den Assistenten..." class="flex-1 p-3 bg-white border border-gray-200 rounded-xl focus:outline-hidden">
                 <button id="btn-send-chat" class="px-4 bg-blue-600 text-white font-semibold rounded-xl">Senden</button>
             </div>
         </section>
@@ -160,7 +162,7 @@
             <div class="bg-white p-5 rounded-2xl border border-gray-200 space-y-3">
                 <h3 class="text-sm font-bold text-gray-800">Sicherheit & API Schlüssel</h3>
                 <p class="text-xs text-gray-500">Dein Google AI Studio Key wird <strong>nur lokal im Browser</strong> für den AI Chat benötigt.</p>
-                <input id="gemini-key" type="password" placeholder="AIzaSy..." class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm">
+                <input id="gemini-key" type="password" placeholder="AIzaSy..." class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl">
                 <button id="btn-save-key" class="w-full py-2.5 bg-blue-600 text-white font-semibold rounded-xl text-sm">Lokal speichern</button>
             </div>
         </section>
@@ -207,25 +209,20 @@
             loadAllData();
             setupEventListeners();
             checkBackupStatus();
-            initIosPwaFocusFix(); // Aktiviert den iOS Tastatur Fix
+            initIosPwaFocusFix();
         });
 
-        // BULLETPROOF FIX FÜR IOS HOME-SCREEN TASTATUR BUG
+        // KORREKTUR: Fängt Touches ab und zwingt iOS im PWA-Modus, das Feld nativ zu fokussieren
         function initIosPwaFocusFix() {
-            document.addEventListener('touchstart', (e) => {
+            const forceFocus = (e) => {
                 const target = e.target.closest('input, textarea, select');
                 if (target) {
-                    e.stopPropagation(); // Verhindert, dass iOS-Gesten das Event abfangen
-                }
-            }, {passive: true});
-
-            document.addEventListener('touchend', (e) => {
-                const target = e.target.closest('input, textarea, select');
-                // Wenn ein Feld angetippt wird, erzwinge den System-Fokus direkt über JS
-                if (target && document.activeElement !== target) {
+                    e.stopPropagation();
                     target.focus();
                 }
-            });
+            };
+            document.addEventListener('touchstart', forceFocus, {passive: true});
+            document.addEventListener('touchend', forceFocus, {passive: true});
         }
 
         function changeMade() {
