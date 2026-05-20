@@ -12,11 +12,17 @@
         .pb-safe { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
         .pt-safe { padding-top: max(1rem, env(safe-area-inset-top)); }
         body { -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        /* Erzwingt Textfokus im iOS Standalone Modus */
+        input, textarea {
+            -webkit-user-select: text !important;
+            user-select: text !important;
+        }
     </style>
 </head>
-<body class="bg-gray-100 h-full flex flex-col overflow-hidden text-gray-900">
+<body class="bg-gray-100 text-gray-900 antialiased">
 
-    <header class="bg-white border-b border-gray-200 pt-safe px-4 pb-3 flex justify-between items-center z-40 sticky top-0">
+    <!-- Header fixiert gegen iOS-Tastatur-Bug -->
+    <header class="bg-white border-b border-gray-200 pt-safe px-4 pb-3 flex justify-between items-center z-40 fixed top-0 left-0 right-0 shadow-xs">
         <h1 id="view-title" class="text-xl font-bold tracking-tight">Übersicht</h1>
         <div class="flex items-center space-x-2">
             <button id="btn-current-month" class="text-xs font-semibold bg-blue-50 text-blue-600 px-2.5 py-1.5 rounded-xl border border-blue-100 active:bg-blue-100">Aktuell</button>
@@ -24,7 +30,8 @@
         </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto px-4 py-4 pb-32">
+    <!-- Inhalt mit ausreichend Abstand für Header und Navigation -->
+    <main class="px-4 pt-24 pb-36 min-h-screen">
         <section id="tab-tracker" class="tab-content space-y-4">
             
             <div class="bg-white p-4 rounded-2xl border border-gray-200 flex flex-col space-y-3 shadow-xs">
@@ -159,6 +166,7 @@
         </section>
     </main>
 
+    <!-- Navigation bleibt fixiert am Boden -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe shadow-xl z-50">
         <div class="flex justify-around items-center h-16 text-[10px] font-semibold text-gray-400">
             <button onclick="switchTab('tracker', 'Übersicht')" class="nav-btn flex flex-col items-center justify-center w-full h-full text-blue-600" data-tab="tracker">
@@ -325,7 +333,7 @@
                     {id: "11", name: "Serafe", total_limit: 336.0, budget_type: 2},
                     {id: "12", name: "Skoda versicherung", total_limit: 528.0, budget_type: 2},
                     {id: "13", name: "Strassensteuer", total_limit: 552.0, budget_type: 2},
-                    {id: "14", name: "Ferien", total_limit: 4000.0, budget_type: 3}, // Geändert auf Typ 3
+                    {id: "14", name: "Ferien", total_limit: 4000.0, budget_type: 3}, 
                     {id: "15", name: "Einkäufe Nahrung u W.", total_limit: 1000.0, budget_type: 0},
                     {id: "16", name: "Essen auswärts", total_limit: 250.0, budget_type: 0},
                     {id: "17", name: "Freizeitaktivität", total_limit: 300.0, budget_type: 0},
@@ -352,7 +360,6 @@
             
             if (!hasAuto) {
                 localCats.forEach(cat => {
-                    // Typ 3 generiert KEINE automatischen Buchungen mehr
                     if (cat.budget_type === 1 || cat.budget_type === 2) {
                         let amount = cat.budget_type === 1 ? cat.total_limit : cat.total_limit / 12.0;
                         localTxs.push({
@@ -379,6 +386,8 @@
             const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
             if(activeBtn) activeBtn.classList.add('text-blue-600');
             if(tabId === 'stats') renderCharts();
+            
+            window.scrollTo(0, 0); // Verhindert Ansichtsfehler beim Tab-Wechsel unter iOS
         }
 
         function loadApiKey() {
@@ -392,7 +401,7 @@
             if(select) {
                 select.innerHTML = '';
                 categories
-                    .filter(c => c.budget_type === 0 || c.budget_type === 3) // Erlaubt Buchungen für Konsum und flexibles Jahresbudget
+                    .filter(c => c.budget_type === 0 || c.budget_type === 3)
                     .sort((a,b) => a.name.localeCompare(b.name))
                     .forEach(c => {
                         let opt = document.createElement('option');
@@ -491,7 +500,6 @@
                 let percent = 0;
                 
                 if (c.budget_type === 2 || c.budget_type === 3) {
-                    // Berechnung über das ganze Jahr
                     spent = allYearTxs.filter(t => String(t.category_id) === String(c.id)).reduce((sum, t) => sum + parseFloat(t.amount), 0);
                     percent = Math.min((spent / c.total_limit) * 100, 100);
                     
@@ -502,12 +510,10 @@
                         infoText = `<span class="font-bold text-gray-900">${spent.toFixed(2)}</span> / ${parseFloat(c.total_limit).toFixed(0)} CHF <span class="text-[10px] text-gray-400 block font-normal">Verfügbarer Jahrestopf</span>`;
                     }
                 } else {
-                    // Berechnung für aktuellen Monat
                     spent = transactions.filter(t => String(t.category_id) === String(c.id) && t.month === selectedMonthStr).reduce((sum, t) => sum + parseFloat(t.amount), 0);
                     percent = Math.min((spent / c.total_limit) * 100, 100);
                     infoText = `<span class="font-bold text-gray-900">${spent.toFixed(2)}</span> / ${parseFloat(c.total_limit).toFixed(0)} CHF`;
                     
-                    // NEU: Zeige das Jahrestotal für monatliche Budgets (Typ 0) als Kontext an
                     if (c.budget_type === 0) {
                         const yearSpent = allYearTxs.filter(t => String(t.category_id) === String(c.id)).reduce((sum, t) => sum + parseFloat(t.amount), 0);
                         infoText += `<span class="text-[10px] text-gray-400 block font-normal">Jahr gesamt: ${yearSpent.toFixed(2)} CHF</span>`;
@@ -635,7 +641,6 @@
             const cleanVendorKey = vendor.toLowerCase();
             let matchedCat = null;
 
-            // Erlaubt jetzt Konsum- (0) und Jahres- (3) Kategorien für die Zuweisung
             const assignableCats = categories.filter(c => c.budget_type === 0 || c.budget_type === 3);
 
             const learnedMappings = JSON.parse(localStorage.getItem('budget_learned_mappings')) || {};
@@ -686,7 +691,6 @@
             const aiCard = document.getElementById('ai-validation-card');
             aiCard.classList.remove('hidden');
             
-            // KORREKTUR: Scrollt präzise an das Ende des Elements, damit es auf dem iPhone ganz sichtbar ist
             setTimeout(() => {
                 aiCard.scrollIntoView({ behavior: 'smooth', block: 'end' });
             }, 80);
