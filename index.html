@@ -128,7 +128,7 @@
                     <p id="stats-var-spent" class="text-sm font-bold text-blue-600">0.00 CHF</p>
                 </div>
                 <div class="bg-white p-3 rounded-xl border border-gray-200 text-center">
-                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Fixkosten (Auto)</span>
+                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Fixkosten</span>
                     <p id="stats-fix-spent" class="text-sm font-medium text-gray-500">0.00 CHF</p>
                 </div>
             </div>
@@ -395,6 +395,15 @@
             }
         }
 
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}.${parts[1]}.${parts[0]}`;
+            }
+            return dateStr;
+        }
+
         function renderTransactionsList() {
             const txs = transactions.filter(t => t.month === selectedMonthStr).sort((a,b) => b.date.localeCompare(a.date));
             const container = document.getElementById('transactions-list');
@@ -427,7 +436,7 @@
                         <div class="p-2 bg-gray-50/50 rounded-lg flex justify-between items-center text-xs">
                             <div>
                                 <p class="font-medium text-gray-700">${t.vendor.replace("Automatisch: ", "")}</p>
-                                <p class="text-[10px] text-gray-400">${t.date}</p>
+                                <p class="text-[10px] text-gray-400">${formatDate(t.date)}</p>
                             </div>
                             <div class="flex items-center space-x-2">
                                 <span class="font-semibold">-${parseFloat(t.amount).toFixed(2)} CHF</span>
@@ -445,7 +454,7 @@
                     <div class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center text-sm">
                         <div>
                             <p class="font-semibold">${t.vendor}</p>
-                            <p class="text-xs text-gray-400">${t.date} · <span class="bg-gray-100 px-1.5 py-0.5 rounded text-[10px]">${cat ? cat.name : 'Keine'}</span></p>
+                            <p class="text-xs text-gray-400">${formatDate(t.date)} · <span class="bg-gray-100 px-1.5 py-0.5 rounded text-[10px]">${cat ? cat.name : 'Keine'}</span></p>
                         </div>
                         <div class="flex items-center space-x-3">
                             <span class="font-bold">-${parseFloat(t.amount).toFixed(2)} CHF</span>
@@ -774,7 +783,6 @@
             let varSpent = 0;
             const catSums = {};
             
-            // 1. Ausgabenberechnung
             currentMonthTxs.forEach(t => {
                 const amt = parseFloat(t.amount);
                 totalSpent += amt;
@@ -793,7 +801,6 @@
             document.getElementById('stats-fix-spent').innerText = `${fixSpent.toFixed(2)} CHF`;
             document.getElementById('stats-var-spent').innerText = `${varSpent.toFixed(2)} CHF`;
 
-            // 2. Dynamische Budget-Analyse (Überreizt vs. Zu viel budgetiert)
             const alertContainer = document.getElementById('stats-budget-alerts');
             alertContainer.innerHTML = '';
             
@@ -801,7 +808,6 @@
             let overbudgetedHtml = '';
 
             categories.forEach(c => {
-                // Nur Konsumbudgets (budget_type === 0) prüfen
                 if (c.budget_type === 0) {
                     const spent = currentMonthTxs
                         .filter(t => String(t.category_id) === String(c.id))
@@ -811,7 +817,6 @@
                     const diff = limit - spent;
 
                     if (spent > limit) {
-                        // Überreizt
                         overdrawnHtml += `
                             <div class="flex justify-between items-center p-3 bg-red-50 text-red-800 rounded-xl text-xs border border-red-200">
                                 <div>
@@ -824,7 +829,6 @@
                                 </div>
                             </div>`;
                     } else if (spent > 0 && diff > (limit * 0.4)) {
-                        // Zu viel budgetiert (Mehr als 40% des Budgets übrig)
                         overbudgetedHtml += `
                             <div class="flex justify-between items-center p-3 bg-emerald-50 text-emerald-800 rounded-xl text-xs border border-emerald-200">
                                 <div>
@@ -849,7 +853,6 @@
                     </div>`;
             }
 
-            // 3. Höchste Einzelposten
             const manualTxs = currentMonthTxs
                 .filter(t => !t.vendor.startsWith("Automatisch:"))
                 .sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount))
@@ -866,14 +869,13 @@
                         <div class="flex justify-between items-center p-2.5 bg-gray-50 rounded-xl text-xs border border-gray-100">
                             <div>
                                 <p class="font-semibold text-gray-700">${t.vendor}</p>
-                                <p class="text-[10px] text-gray-400">${t.date} · ${cat ? cat.name : 'Allgemein'}</p>
+                                <p class="text-[10px] text-gray-400">${formatDate(t.date)} · ${cat ? cat.name : 'Allgemein'}</p>
                             </div>
                             <span class="font-bold text-gray-900">-${parseFloat(t.amount).toFixed(2)} CHF</span>
                         </div>`;
                 });
             }
 
-            // 4. Chart generation
             const katLabels = Object.keys(catSums);
             const katData = Object.values(catSums);
 
