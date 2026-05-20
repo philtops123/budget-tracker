@@ -65,7 +65,7 @@
                 </div>
                 <div class="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                        <label class="text-xs text-amber-700 block mb-0.5">Händler</label>
+                        <label class="text-xs text-amber-700 block mb-0.5">Zweck / Händler</label>
                         <input id="val-vendor" type="text" class="w-full p-2.5 bg-white border border-amber-300 rounded-xl focus:outline-hidden">
                     </div>
                     <div>
@@ -322,7 +322,7 @@
                     {id: "21", name: "Kleider", total_limit: 250.0, budget_type: 0},
                     {id: "22", name: "Training Kinder", total_limit: 41.0, budget_type: 0},
                     {id: "23", name: "Reservebetrag", total_limit: 300.0, budget_type: 0},
-                    {id: "24", name: "Säule 3A", total_limit: 208.0, budget_type: 0}
+                    {id: "24", name: "Säule 3A", total_limit: 2496.0, budget_type: 2}
                 ];
                 localStorage.setItem('budget_categories', JSON.stringify(defaultCats));
             }
@@ -574,23 +574,25 @@
             if (!text) return;
 
             const lowerText = text.toLowerCase().replace(/,/, '.');
-
-            const numbers = lowerText.match(/\d+(\.\d+)?/g);
             let amount = 0.00;
-            
-            if (numbers) {
-                const decimals = numbers.filter(n => n.includes('.'));
-                if (decimals.length > 0) {
-                    amount = parseFloat(decimals[decimals.length - 1]);
-                } else {
-                    amount = parseFloat(numbers[numbers.length - 1]);
-                }
+            let vendor = text;
+
+            // Betrag präzise finden und exakt ausschneiden (verhindert Verkrüppelung des Strings)
+            const priceRegex = /\d+([.,]\d+)?/;
+            const match = text.match(priceRegex);
+            if (match) {
+                amount = parseFloat(match[0].replace(',', '.'));
+                vendor = text.replace(match[0], '');
             }
 
-            let vendor = text.replace(new RegExp(amount.toString().replace('.', '[.,]')), '').replace(/chf|franken|fr\.|ch/i, '').trim();
-            vendor = vendor.replace(/^bei|^im|^in|^vom|^am/i, '').trim(); 
-            vendor = vendor.replace(/^\d+\s*x|^\d+\s*packung(en)?/i, '').trim();
-            if (!vendor) vendor = "Unbekannter Händler";
+            // Zweck / Händler sauber bereinigen
+            vendor = vendor.replace(/chf|franken|fr\.|fr|ch/i, '')
+                           .replace(/^bei|^im|^in|^vom|^am/i, '')
+                           .replace(/^\d+\s*x|^\d+\s*packung(en)?/i, '')
+                           .replace(/\s+/g, ' ')
+                           .trim();
+
+            if (!vendor) vendor = "Unbekannter Zweck";
             vendor = vendor.charAt(0).toUpperCase() + vendor.slice(1);
 
             const cleanVendorKey = vendor.toLowerCase();
@@ -609,7 +611,7 @@
                     "nahr": ['coop', 'migros', 'denner', 'aldi', 'lidl', 'spar', 'manor', 'bäckerei', 'beck', 'metzgerei', 'volg', 'lebensmittel', 'brot', 'milch'],
                     "ausw": ['restaurant', 'bar', 'café', 'cafe', 'pub', 'bier', 'mcdonald', 'burger', 'pizza', 'kebab', 'sushi', 'takeaway', 'starbucks', 'döner', 'bistro', 'essen'],
                     "tank": ['tanken', 'benzin', 'diesel', 'shell', 'socar', 'bp', 'avia', 'migrol', 'tankstelle', 'skoda'],
-                    "freiz": ['mediamarkt', 'media markt', 'digitec', 'galaxus', 'interdiscount', 'fnac', 'kino', 'museum', 'konzert', 'sport', 'fitness', 'bouldern', 'klettern', 'ticket', 'sbb', 'zug', 'bahn', 'tram', 'bus', 'game', 'xbox', 'playstation', 'netflix', 'spotify'],
+                    "freiz": ['mediamarkt', 'media markt', 'digitec', 'galaxus', 'interdiscount', 'fnac', 'kino', 'museum', 'konzert', 'sport', 'fitness', 'bouldern', 'klettern', 'ticket', 'sbb', 'zug', 'bahn', 'tram', 'bus', 'game', 'xbox', 'playstation', 'netflix', 'spotify', 'ausflug', 'ausflüge', 'trip', 'zoo', 'eintritt', 'aktivität'],
                     "kleid": ['h&m', 'zara', 'zalando', 'kleider', 'schuhe', 'mode', 'c&a', 'mango', 'nike', 'adidas'],
                     "gesund": ['arzt', 'apotheke', 'zahnarzt', 'medikament', 'spital', 'krank', 'physio', 'pille'],
                     "abfall": ['abfall', 'entsorgung', 'gebührenmarke', 'kehrricht', 'sack', 'recycling', 'werkhof']
@@ -633,8 +635,8 @@
             }
 
             if (!matchedCat) {
-                matchedCat = consumptionCats.find(c => c.name.toLowerCase().includes('reserve')) || 
-                             consumptionCats.find(c => c.name.toLowerCase().includes('nahrung')) || 
+                matchedCat = consumptionCats.find(c => c.name.toLowerCase().includes('nahrung')) || 
+                             consumptionCats.find(c => c.name.toLowerCase().includes('reserve')) || 
                              consumptionCats[0];
             }
 
@@ -645,7 +647,7 @@
             const aiCard = document.getElementById('ai-validation-card');
             aiCard.classList.remove('hidden');
             
-            // Fix für iOS Viewport-Rendering-Verzögerung
+            // Verzögerter iOS-Zentrierungs-Scroll
             setTimeout(() => {
                 aiCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 80);
