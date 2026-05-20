@@ -229,8 +229,8 @@
 
         function exportBackupData() {
             const data = {
-                categories: JSON.parse(localStorage.getItem('budget_categories')) || [],
-                transactions: JSON.parse(localStorage.getItem('budget_transactions')) || [],
+                categories: categories,
+                transactions: transactions,
                 gemini_key: localStorage.getItem('gemini_api_key') || '',
                 learned_mappings: JSON.parse(localStorage.getItem('budget_learned_mappings')) || {}
             };
@@ -242,6 +242,7 @@
             a.download = `budget_backup_${date}.json`;
             a.click();
             
+            URL.revokeObjectURL(url);
             localStorage.setItem('budget_backup_needed', 'false');
             checkBackupStatus();
         }
@@ -253,21 +254,26 @@
             reader.onload = (e) => {
                 try {
                     const parsed = JSON.parse(e.target.result);
-                    if (parsed.categories && parsed.transactions) {
+                    if (Array.isArray(parsed.categories) && Array.isArray(parsed.transactions)) {
                         localStorage.setItem('budget_categories', JSON.stringify(parsed.categories));
                         localStorage.setItem('budget_transactions', JSON.stringify(parsed.transactions));
                         if(parsed.gemini_key) localStorage.setItem('gemini_api_key', parsed.gemini_key);
                         if(parsed.learned_mappings) localStorage.setItem('budget_learned_mappings', JSON.stringify(parsed.learned_mappings));
                         localStorage.setItem('budget_backup_needed', 'false');
-                        alert("Datei erfolgreich eingelesen!");
+                        
                         loadAllData();
                         loadApiKey();
                         checkBackupStatus();
+
+                        const statusText = document.getElementById('voice-status');
+                        if (statusText) statusText.innerText = "✅ Datei erfolgreich eingelesen!";
                     } else {
-                        alert("Ungültiges Dateiformat.");
+                        alert("Ungültiges Dateiformat: Kategorien oder Buchungen fehlerhaft.");
                     }
                 } catch(err) {
-                    alert("Fehler beim Lesen der Datei.");
+                    alert("Fehler beim Parsen der JSON-Datei.");
+                } finally {
+                    event.target.value = '';
                 }
             };
             reader.readAsText(file);
