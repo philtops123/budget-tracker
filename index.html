@@ -1,174 +1,4 @@
-<!DOCTYPE html>
-<html lang="de" class="h-full">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Budget Tracker Local</title>
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        .pb-safe { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
-        .pt-safe { padding-top: max(1rem, env(safe-area-inset-top)); }
-        body { -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-    </style>
-</head>
-<body class="bg-gray-100 h-full flex flex-col overflow-hidden text-gray-900 select-none">
-
-    <header class="bg-white border-b border-gray-200 pt-safe px-4 pb-3 flex justify-between items-center z-40 sticky top-0">
-        <h1 id="view-title" class="text-xl font-bold tracking-tight">Übersicht</h1>
-        <div class="flex items-center space-x-2">
-            <button id="btn-current-month" class="text-xs font-semibold bg-blue-50 text-blue-600 px-2.5 py-1.5 rounded-xl border border-blue-100 active:bg-blue-100">Aktuell</button>
-            <select id="month-select" class="text-sm font-semibold bg-gray-100 text-gray-700 px-3 py-1.5 rounded-xl border border-gray-200 focus:outline-hidden"></select>
-        </div>
-    </header>
-
-    <main class="flex-1 overflow-y-auto px-4 py-4 pb-32">
-        <section id="tab-tracker" class="tab-content space-y-4">
-            
-            <div class="bg-white p-4 rounded-2xl border border-gray-200 flex flex-col space-y-3 shadow-xs">
-                <div class="flex justify-between items-center">
-                    <div class="flex items-center space-x-2">
-                        <span id="file-status-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                        <span id="file-status-text" class="text-xs font-semibold text-gray-600">Daten sind gesichert</span>
-                    </div>
-                    <span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-semibold">iPhone Speicher</span>
-                </div>
-                <div class="flex space-x-2">
-                    <button onclick="exportBackupData()" class="flex-1 py-2.5 bg-gray-950 active:bg-gray-800 text-white font-semibold rounded-xl text-xs shadow-xs transition-all">
-                        Datei sichern
-                    </button>
-                    <label class="flex-1 py-2.5 bg-gray-100 active:bg-gray-200 text-gray-700 font-semibold rounded-xl text-xs text-center cursor-pointer transition-all">
-                        Datei einlesen
-                        <input id="btn-main-import" type="file" accept=".json" class="hidden">
-                    </label>
-                </div>
-            </div>
-
-            <div class="bg-white p-5 rounded-2xl shadow-xs border border-gray-100 text-center space-y-4">
-                <p class="text-sm text-gray-500 font-medium">Spracheingabe halten (z.B. "Coop 23.50")</p>
-                <div class="flex justify-center items-center">
-                    <button id="btn-voice" class="w-20 h-20 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md active:scale-95 transition-all select-none">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
-                    </button>
-                </div>
-                <p id="voice-status" class="text-xs text-gray-400 italic">Bereit...</p>
-                <textarea id="text-input" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-hidden" rows="2" placeholder="Text eingeben (z.B. Coop 23.50)..."></textarea>
-                <button id="btn-analyze" class="w-full py-3 bg-blue-600 active:bg-blue-700 text-white font-semibold rounded-xl text-sm shadow-xs">Text analysieren</button>
-            </div>
-
-            <div id="ai-validation-card" class="bg-amber-50 border border-amber-200 p-4 rounded-2xl space-y-3 hidden">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-sm font-bold text-amber-800">Vorschlag (Algorithmus)</h3>
-                    <span class="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-semibold">Prüfen</span>
-                </div>
-                <div class="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                        <label class="text-xs text-amber-700 block mb-0.5">Händler</label>
-                        <input id="val-vendor" type="text" class="w-full p-2.5 bg-white border border-amber-300 rounded-xl focus:outline-hidden">
-                    </div>
-                    <div>
-                        <label class="text-xs text-amber-700 block mb-0.5">Betrag (CHF)</label>
-                        <input id="val-amount" type="number" step="0.01" class="w-full p-2.5 bg-white border border-amber-300 rounded-xl focus:outline-hidden">
-                    </div>
-                </div>
-                <div>
-                    <label class="text-xs text-amber-700 block mb-0.5">Kategorie manuell ändern:</label>
-                    <select id="val-category" class="w-full p-2.5 bg-white border border-amber-300 rounded-xl text-sm focus:outline-hidden"></select>
-                </div>
-                <div class="flex space-x-2 pt-1">
-                    <button id="btn-save-ai" class="flex-1 py-3 bg-emerald-600 text-white font-semibold rounded-xl text-sm shadow-xs">Buchung speichern</button>
-                    <button id="btn-cancel-ai" class="py-3 px-4 bg-gray-200 text-gray-700 rounded-xl text-sm font-medium">Verwerfen</button>
-                </div>
-            </div>
-
-            <div class="space-y-2">
-                <h2 class="text-base font-bold text-gray-500 pl-1">Buchungen für gewählten Monat</h2>
-                <div id="transactions-list" class="space-y-2"></div>
-            </div>
-        </section>
-
-        <section id="tab-budgets" class="tab-content space-y-4 hidden">
-            <div id="budget-progress-list" class="space-y-6"></div>
-            
-            <div class="bg-white p-4 rounded-2xl border border-gray-200 space-y-3 mt-6">
-                <h3 class="text-sm font-bold text-gray-700">Neue Kategorie hinzufügen</h3>
-                <input id="new-cat-name" type="text" placeholder="Kategoriename" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm">
-                <input id="new-cat-limit" type="number" placeholder="Limit (CHF)" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm">
-                <select id="new-cat-type" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm">
-                    <option value="0">Monatliches Konsumbudget</option>
-                    <option value="1">Monatlicher Dauerauftrag (Fixkosten Auto-Fill)</option>
-                    <option value="2">Jahres-Rückstellung (Dauerauftrag Auto-Fill 1/12)</option>
-                </select>
-                <button id="btn-add-cat" class="w-full py-2.5 bg-blue-600 text-white font-semibold rounded-xl text-sm">Erstellen</button>
-            </div>
-        </section>
-
-        <section id="tab-chat" class="tab-content space-y-4 hidden flex flex-col h-[55vh]">
-            <div id="chat-box" class="flex-1 overflow-y-auto bg-white p-4 rounded-2xl border border-gray-200 space-y-3 text-sm">
-                <div class="bg-blue-50 text-blue-800 p-3 rounded-2xl rounded-tl-none max-w-[85%]">
-                    Frage mich alles zu deinem Budget, z.B.: "Wie viel Geld habe ich noch für Food?"
-                </div>
-            </div>
-            <div class="flex space-x-2 mt-2">
-                <input id="chat-input" type="text" placeholder="Frage an den Assistenten..." class="flex-1 p-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-hidden">
-                <button id="btn-send-chat" class="px-4 bg-blue-600 text-white font-semibold rounded-xl">Senden</button>
-            </div>
-        </section>
-
-        <section id="tab-stats" class="tab-content space-y-4 hidden">
-            <div class="bg-white p-4 rounded-2xl border border-gray-200 flex flex-col items-center">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider self-start mb-4">Verteilung nach Kategorien</h3>
-                <div class="w-full h-56 relative flex justify-center">
-                    <canvas id="chart-kategorien"></canvas>
-                </div>
-            </div>
-            <div class="bg-white p-4 rounded-2xl border border-gray-200">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Ausgaben-Verlauf (6 Monate)</h3>
-                <div class="w-full h-48">
-                    <canvas id="chart-historie"></canvas>
-                </div>
-            </div>
-        </section>
-
-        <section id="tab-settings" class="tab-content space-y-4 hidden">
-            <div class="bg-white p-5 rounded-2xl border border-gray-200 space-y-3">
-                <h3 class="text-sm font-bold text-gray-800">Sicherheit & API Schlüssel</h3>
-                <p class="text-xs text-gray-500">Dein Google AI Studio Key wird <strong>nur lokal im Browser</strong> für den AI Chat benötigt.</p>
-                <input id="gemini-key" type="password" placeholder="AIzaSy..." class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm">
-                <button id="btn-save-key" class="w-full py-2.5 bg-blue-600 text-white font-semibold rounded-xl text-sm">Lokal speichern</button>
-            </div>
-        </section>
-    </main>
-
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe shadow-xl z-50">
-        <div class="flex justify-around items-center h-16 text-[10px] font-semibold text-gray-400">
-            <button onclick="switchTab('tracker', 'Übersicht')" class="nav-btn flex flex-col items-center justify-center w-full h-full text-blue-600" data-tab="tracker">
-                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                <span>Tracker</span>
-            </button>
-            <button onclick="switchTab('budgets', 'Budgets & Fixkosten')" class="nav-btn flex flex-col items-center justify-center w-full h-full" data-tab="budgets">
-                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-                <span>Budgets</span>
-            </button>
-            <button onclick="switchTab('chat', 'AI Assistent')" class="nav-btn flex flex-col items-center justify-center w-full h-full" data-tab="chat">
-                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                <span>AI Chat</span>
-            </button>
-            <button onclick="switchTab('stats', 'Historie')" class="nav-btn flex flex-col items-center justify-center w-full h-full" data-tab="stats">
-                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 00-2-2H5a2 2 0 00-2 2v10m9-.5V11a2 2 0 00-2-2h-2a2 2 0 00-2 2v8.5m9 0V5a2 2 0 00-2-2h-2a2 2 0 00-2 2v14.5m5 0h2a2 2 0 002-2v-3.5a2 2 0 00-2-2h-2a2 2 0 00-2 2v3.5a2 2 0 002 2z"/></svg>
-                <span>Statistik</span>
-            </button>
-            <button onclick="switchTab('settings', 'Einstellungen')" class="nav-btn flex flex-col items-center justify-center w-full h-full" data-tab="settings">
-                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                <span>Settings</span>
-            </button>
-        </div>
-    </nav>
-
-    <script>
-        let categories = [];
+let categories = [];
         let transactions = [];
         let chartHistorieInstance = null;
         let chartKategorienInstance = null;
@@ -215,7 +45,8 @@
             const data = {
                 categories: JSON.parse(localStorage.getItem('budget_categories')) || [],
                 transactions: JSON.parse(localStorage.getItem('budget_transactions')) || [],
-                gemini_key: localStorage.getItem('gemini_api_key') || ''
+                gemini_key: localStorage.getItem('gemini_api_key') || '',
+                learned_mappings: JSON.parse(localStorage.getItem('budget_learned_mappings')) || {}
             };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -240,6 +71,7 @@
                         localStorage.setItem('budget_categories', JSON.stringify(parsed.categories));
                         localStorage.setItem('budget_transactions', JSON.stringify(parsed.transactions));
                         if(parsed.gemini_key) localStorage.setItem('gemini_api_key', parsed.gemini_key);
+                        if(parsed.learned_mappings) localStorage.setItem('budget_learned_mappings', JSON.stringify(parsed.learned_mappings));
                         localStorage.setItem('budget_backup_needed', 'false');
                         alert("Datei erfolgreich eingelesen!");
                         loadAllData();
@@ -288,30 +120,30 @@
             let localCats = JSON.parse(localStorage.getItem('budget_categories'));
             if (!localCats || localCats.length === 0) {
                 const defaultCats = [
-                    {id: 1, name: "Miete", total_limit: 1300.0, budget_type: 1},
-                    {id: 2, name: "Hausratversicherung", total_limit: 15.60, budget_type: 1},
-                    {id: 3, name: "Krankenkasse", total_limit: 650.0, budget_type: 1},
-                    {id: 4, name: "Skoda tank", total_limit: 130.0, budget_type: 1},
-                    {id: 5, name: "Autorückstellung", total_limit: 200.0, budget_type: 1},
-                    {id: 6, name: "Abos", total_limit: 32.0, budget_type: 1},
-                    {id: 7, name: "Internet", total_limit: 22.0, budget_type: 1},
-                    {id: 8, name: "Natelabo", total_limit: 22.0, budget_type: 1},
-                    {id: 9, name: "Sparen", total_limit: 100.0, budget_type: 1},
-                    {id: 10, name: "Steuern", total_limit: 4500.0, budget_type: 2},
-                    {id: 11, name: "Serafe", total_limit: 336.0, budget_type: 2},
-                    {id: 12, name: "Skoda versicherung", total_limit: 528.0, budget_type: 2},
-                    {id: 13, name: "Strassensteuer", total_limit: 552.0, budget_type: 2},
-                    {id: 14, name: "Ferien", total_limit: 4000.0, budget_type: 2},
-                    {id: 15, name: "Einkäufe Nahrung u W.", total_limit: 1000.0, budget_type: 0},
-                    {id: 16, name: "Essen auswärts", total_limit: 250.0, budget_type: 0},
-                    {id: 17, name: "Freizeitaktivität", total_limit: 300.0, budget_type: 0},
-                    {id: 18, name: "Gesundheitskosten", total_limit: 300.0, budget_type: 0},
-                    {id: 19, name: "Abfall und Entsorgung", total_limit: 40.0, budget_type: 0},
-                    {id: 20, name: "Schule / Lager / Geschenke", total_limit: 30.0, budget_type: 0},
-                    {id: 21, name: "Kleider", total_limit: 250.0, budget_type: 0},
-                    {id: 22, name: "Training Kinder", total_limit: 41.0, budget_type: 0},
-                    {id: 23, name: "Reservebetrag", total_limit: 300.0, budget_type: 0},
-                    {id: 24, name: "Säule 3A", total_limit: 208.0, budget_type: 0}
+                    {id: "1", name: "Miete", total_limit: 1300.0, budget_type: 1},
+                    {id: "2", name: "Hausratversicherung", total_limit: 15.60, budget_type: 1},
+                    {id: "3", name: "Krankenkasse", total_limit: 650.0, budget_type: 1},
+                    {id: "4", name: "Skoda tank", total_limit: 130.0, budget_type: 1},
+                    {id: "5", name: "Autorückstellung", total_limit: 200.0, budget_type: 1},
+                    {id: "6", name: "Abos", total_limit: 32.0, budget_type: 1},
+                    {id: "7", name: "Internet", total_limit: 22.0, budget_type: 1},
+                    {id: "8", name: "Natelabo", total_limit: 22.0, budget_type: 1},
+                    {id: "9", name: "Sparen", total_limit: 100.0, budget_type: 1},
+                    {id: "10", name: "Steuern", total_limit: 4500.0, budget_type: 2},
+                    {id: "11", name: "Serafe", total_limit: 336.0, budget_type: 2},
+                    {id: "12", name: "Skoda versicherung", total_limit: 528.0, budget_type: 2},
+                    {id: "13", name: "Strassensteuer", total_limit: 552.0, budget_type: 2},
+                    {id: "14", name: "Ferien", total_limit: 4000.0, budget_type: 2},
+                    {id: "15", name: "Einkäufe Nahrung u W.", total_limit: 1000.0, budget_type: 0},
+                    {id: "16", name: "Essen auswärts", total_limit: 250.0, budget_type: 0},
+                    {id: "17", name: "Freizeitaktivität", total_limit: 300.0, budget_type: 0},
+                    {id: "18", name: "Gesundheitskosten", total_limit: 300.0, budget_type: 0},
+                    {id: "19", name: "Abfall und Entsorgung", total_limit: 40.0, budget_type: 0},
+                    {id: "20", name: "Schule / Lager / Geschenke", total_limit: 30.0, budget_type: 0},
+                    {id: "21", name: "Kleider", total_limit: 250.0, budget_type: 0},
+                    {id: "22", name: "Training Kinder", total_limit: 41.0, budget_type: 0},
+                    {id: "23", name: "Reservebetrag", total_limit: 300.0, budget_type: 0},
+                    {id: "24", name: "Säule 3A", total_limit: 208.0, budget_type: 0}
                 ];
                 localStorage.setItem('budget_categories', JSON.stringify(defaultCats));
             }
@@ -331,7 +163,7 @@
                     if (cat.budget_type > 0) {
                         let amount = cat.budget_type === 1 ? cat.total_limit : cat.total_limit / 12.0;
                         localTxs.push({
-                            id: Math.floor(Math.random() * 1000000000),
+                            id: crypto.randomUUID(),
                             category_id: cat.id,
                             vendor: `Automatisch: ${cat.name}`,
                             amount: parseFloat(amount),
@@ -350,7 +182,9 @@
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
             document.getElementById('view-title').innerText = title;
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('text-blue-600'));
-            document.querySelector(`[data-tab="${tabId}"]`).classList.add('text-blue-600');
+            
+            const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
+            if(activeBtn) activeBtn.classList.add('text-blue-600');
             if(tabId === 'stats') renderCharts();
         }
 
@@ -400,7 +234,6 @@
                 `;
                 
                 autoTxs.forEach(t => {
-                    const cat = categories.find(c => c.id == t.category_id);
                     folderHtml += `
                         <div class="p-2 bg-gray-50/50 rounded-lg flex justify-between items-center text-xs">
                             <div>
@@ -409,7 +242,7 @@
                             </div>
                             <div class="flex items-center space-x-2">
                                 <span class="font-semibold">-${parseFloat(t.amount).toFixed(2)} CHF</span>
-                                <button onclick="deleteTx(${t.id})" class="text-red-400 font-bold px-1 text-sm hover:text-red-600">×</button>
+                                <button onclick="deleteTx('${t.id}')" class="text-red-400 font-bold px-1 text-sm hover:text-red-600">×</button>
                             </div>
                         </div>`;
                 });
@@ -418,7 +251,7 @@
             }
 
             manualTxs.forEach(t => {
-                const cat = categories.find(c => c.id == t.category_id);
+                const cat = categories.find(c => String(c.id) === String(t.category_id));
                 container.innerHTML += `
                     <div class="bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center text-sm">
                         <div>
@@ -427,7 +260,7 @@
                         </div>
                         <div class="flex items-center space-x-3">
                             <span class="font-bold">-${parseFloat(t.amount).toFixed(2)} CHF</span>
-                            <button onclick="deleteTx(${t.id})" class="text-red-500 font-bold px-1">×</button>
+                            <button onclick="deleteTx('${t.id}')" class="text-red-500 font-bold px-1">×</button>
                         </div>
                     </div>`;
             });
@@ -452,12 +285,12 @@
                 let percent = 0;
                 
                 if (c.budget_type === 2) {
-                    spent = allYearTxs.filter(t => t.category_id == c.id).reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                    spent = allYearTxs.filter(t => String(t.category_id) === String(c.id)).reduce((sum, t) => sum + parseFloat(t.amount), 0);
                     percent = Math.min((spent / c.total_limit) * 100, 100);
                     const monthlyShare = (c.total_limit / 12).toFixed(2);
                     infoText = `<span class="font-bold text-gray-900">${spent.toFixed(2)}</span> / ${parseFloat(c.total_limit).toFixed(0)} CHF <span class="text-[10px] text-gray-400 block font-normal">Ziel: +${monthlyShare} CHF/Mt.</span>`;
                 } else {
-                    spent = transactions.filter(t => t.category_id == c.id && t.month === selectedMonthStr).reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                    spent = transactions.filter(t => String(t.category_id) === String(c.id) && t.month === selectedMonthStr).reduce((sum, t) => sum + parseFloat(t.amount), 0);
                     percent = Math.min((spent / c.total_limit) * 100, 100);
                     infoText = `<span class="font-bold text-gray-900">${spent.toFixed(2)}</span> / ${parseFloat(c.total_limit).toFixed(0)} CHF`;
                 }
@@ -472,8 +305,8 @@
                             <div>
                                 <span class="text-gray-800">${c.name}</span>
                                 <div class="mt-0.5 space-x-2">
-                                    <button onclick="editCategory(${c.id}, ${c.total_limit})" class="text-[11px] text-blue-500 hover:underline font-normal">Anpassen</button>
-                                    <button onclick="deleteCategory(${c.id})" class="text-[11px] text-red-400 hover:underline font-normal">Löschen</button>
+                                    <button onclick="editCategory('${c.id}', ${c.total_limit})" class="text-[11px] text-blue-500 hover:underline font-normal">Anpassen</button>
+                                    <button onclick="deleteCategory('${c.id}')" class="text-[11px] text-red-400 hover:underline font-normal">Löschen</button>
                                 </div>
                             </div>
                             <span class="text-xs text-gray-500 text-right">${infoText}</span>
@@ -528,8 +361,8 @@
                 btnVoice.addEventListener('mousedown', startRecording);
                 btnVoice.addEventListener('mouseup', stopRecording);
                 btnVoice.addEventListener('mouseleave', stopRecording);
-                btnVoice.addEventListener('touchstart', startRecording);
-                btnVoice.addEventListener('touchend', stopRecording);
+                btnVoice.addEventListener('touchstart', startRecording, {passive: false});
+                btnVoice.addEventListener('touchend', stopRecording, {passive: false});
             } else {
                 statusText.innerText = "Spracherkennung wird nicht unterstützt.";
             }
@@ -553,45 +386,67 @@
             document.getElementById('btn-send-chat').addEventListener('click', sendChatToAssistantDirectly);
         }
 
-        // NEU: Stark verbesserter, fehlerfreier Zuordnungs-Algorithmus
+        // TOP ALGORITHMUS: Findet Preise intelligent und nutzt robustes Wortstamm-Matching
         function analyzeTextWithDeterministicAlgorithm() {
             const text = document.getElementById('text-input').value.trim();
             const statusText = document.getElementById('voice-status');
             if (!text) return;
 
-            const lowerText = text.toLowerCase();
+            const lowerText = text.toLowerCase().replace(/,/, '.');
 
-            // 1. Geldbetrag präzise filtern
-            const amountMatch = text.replace(',', '.').match(/\d+(\.\d{1,2})?/);
-            const amount = amountMatch ? parseFloat(amountMatch[0]) : 0.00;
-
-            // 2. Händlername bereinigen
-            let vendor = text.replace(/\d+([.,]\d{1,2})?/, '').replace(/chf|franken|fr\.|ch/i, '').trim();
-            vendor = vendor.replace(/^bei|^im|^in|^vom|^am/i, '').trim(); 
-            if (!vendor) vendor = "Unbekannter Händler";
-            vendor = vendor.charAt(0).toUpperCase() + vendor.slice(1);
-
-            // 3. Schweizer Keyword-Matrix
-            let matchedCat = null;
-            const mapping = {
-                "nahrung": ['coop', 'migros', 'denner', 'aldi', 'lidl', 'spar', 'manor', 'bäckerei', 'beck', 'metzgerei', 'volg', 'lebensmittel'],
-                "auswärts": ['restaurant', 'bar', 'café', 'cafe', 'pub', 'bier', 'mcdonald', 'burger', 'pizza', 'kebab', 'sushi', 'takeaway', 'starbucks', 'döner', 'bistro'],
-                "tank": ['tanken', 'benzin', 'diesel', 'shell', 'socar', 'bp', 'avia', 'migrol', 'tankstelle'],
-                "freizeit": ['mediamarkt', 'media markt', 'digitec', 'galaxus', 'interdiscount', 'fnac', 'kino', 'museum', 'konzert', 'sport', 'fitness', 'bouldern', 'klettern', 'ticket', 'sbb', 'zug', 'bahn', 'tram', 'bus', 'game', 'xbox', 'playstation'],
-                "kleider": ['h&m', 'zara', 'zalando', 'kleider', 'schuhe', 'mode', 'c&a', 'mango', 'nike', 'adidas'],
-                "gesundheit": ['arzt', 'apotheke', 'zahnarzt', 'medikament', 'spital', 'krank', 'physio'],
-                "abfall": ['abfall', 'entsorgung', 'gebührenmarke', 'kehrricht', 'sack', 'recycling', 'werkhof']
-            };
-
-            // Regel 1: Suche nach vordefinierten Keywords
-            for (const [catKey, keywords] of Object.entries(mapping)) {
-                if (keywords.some(kw => lowerText.includes(kw))) {
-                    matchedCat = categories.find(c => c.name.toLowerCase().includes(catKey));
-                    if (matchedCat) break;
+            // 1. Intelligentere Preiserkennung (Nimmt die wahrscheinlichste Zahl als Betrag)
+            const numbers = lowerText.match(/\d+(\.\d+)?/g);
+            let amount = 0.00;
+            
+            if (numbers) {
+                // Sucht zuerst nach Zahlen mit Dezimalstellen (Preistypisch), sonst die letzte Zahl im Satz
+                const decimals = numbers.filter(n => n.includes('.'));
+                if (decimals.length > 0) {
+                    amount = parseFloat(decimals[decimals.length - 1]);
+                } else {
+                    amount = parseFloat(numbers[numbers.length - 1]);
                 }
             }
 
-            // Regel 2: Falls kein Keyword zutrifft, prüfe direkte Namensvorkommen der Kategorien
+            // 2. Händlername isolieren (Entfernt den ermittelten Betrag und Füllwörter)
+            let vendor = text.replace(new RegExp(amount.toString().replace('.', '[.,]')), '').replace(/chf|franken|fr\.|ch/i, '').trim();
+            vendor = vendor.replace(/^bei|^im|^in|^vom|^am/i, '').trim(); 
+            // Bereinigung von Mengenangaben am Anfang (z.B. "3x" oder "3 Packungen")
+            vendor = vendor.replace(/^\d+\s*x|^\d+\s*packung(en)?/i, '').trim();
+            if (!vendor) vendor = "Unbekannter Händler";
+            vendor = vendor.charAt(0).toUpperCase() + vendor.slice(1);
+
+            const cleanVendorKey = vendor.toLowerCase();
+            let matchedCat = null;
+
+            // STRATEGIE 1: Lokales Gedächtnis prüfen (User-Korrekturen)
+            const learnedMappings = JSON.parse(localStorage.getItem('budget_learned_mappings')) || {};
+            if (learnedMappings[cleanVendorKey]) {
+                const memoryMatch = categories.find(c => String(c.id) === String(learnedMappings[cleanVendorKey]));
+                if (memoryMatch) matchedCat = memoryMatch;
+            }
+
+            // STRATEGIE 2: Keyword-Matrix mit Wortstamm-Klassifizierung
+            if (!matchedCat) {
+                const mapping = {
+                    "nahr": ['coop', 'migros', 'denner', 'aldi', 'lidl', 'spar', 'manor', 'bäckerei', 'beck', 'metzgerei', 'volg', 'lebensmittel', 'brot', 'milch'],
+                    "ausw": ['restaurant', 'bar', 'café', 'cafe', 'pub', 'bier', 'mcdonald', 'burger', 'pizza', 'kebab', 'sushi', 'takeaway', 'starbucks', 'döner', 'bistro', 'essen'],
+                    "tank": ['tanken', 'benzin', 'diesel', 'shell', 'socar', 'bp', 'avia', 'migrol', 'tankstelle'],
+                    "freiz": ['mediamarkt', 'media markt', 'digitec', 'galaxus', 'interdiscount', 'fnac', 'kino', 'museum', 'konzert', 'sport', 'fitness', 'bouldern', 'klettern', 'ticket', 'sbb', 'zug', 'bahn', 'tram', 'bus', 'game', 'xbox', 'playstation', 'netflix', 'spotify'],
+                    "kleid": ['h&m', 'zara', 'zalando', 'kleider', 'schuhe', 'mode', 'c&a', 'mango', 'nike', 'adidas'],
+                    "gesund": ['arzt', 'apotheke', 'zahnarzt', 'medikament', 'spital', 'krank', 'physio', 'pille'],
+                    "abfall": ['abfall', 'entsorgung', 'gebührenmarke', 'kehrricht', 'sack', 'recycling', 'werkhof']
+                };
+
+                for (const [catKey, keywords] of Object.entries(mapping)) {
+                    if (keywords.some(kw => lowerText.includes(kw))) {
+                        matchedCat = categories.find(c => c.name.toLowerCase().includes(catKey));
+                        if (matchedCat) break;
+                    }
+                }
+            }
+
+            // STRATEGIE 3: Direkte Suche im Namen der Kategorie
             if (!matchedCat) {
                 for (const cat of categories) {
                     if (lowerText.includes(cat.name.toLowerCase())) {
@@ -601,7 +456,7 @@
                 }
             }
 
-            // Regel 3: Sicherer Fallback (Verhindert fehlerhafte Fixkosten- oder Abfall-Zuweisung)
+            // STRATEGIE 4: Fallback auf Konsum oder Reserve
             if (!matchedCat) {
                 matchedCat = categories.find(c => c.name.toLowerCase().includes('reserve')) || 
                              categories.find(c => c.name.toLowerCase().includes('nahrung')) || 
@@ -609,7 +464,6 @@
                              categories[0];
             }
 
-            // Felder abfüllen
             document.getElementById('val-vendor').value = vendor;
             document.getElementById('val-amount').value = amount;
             if (matchedCat) document.getElementById('val-category').value = matchedCat.id;
@@ -621,12 +475,20 @@
         function saveAiTransaction() {
             const today = new Date().toISOString().slice(0, 10);
             const targetDate = today.startsWith(selectedMonthStr) ? today : `${selectedMonthStr}-01`;
+            const selectedCategoryId = document.getElementById('val-category').value;
+            const vendorName = document.getElementById('val-vendor').value.trim();
+
+            if (vendorName) {
+                const learnedMappings = JSON.parse(localStorage.getItem('budget_learned_mappings')) || {};
+                learnedMappings[vendorName.toLowerCase()] = selectedCategoryId;
+                localStorage.setItem('budget_learned_mappings', JSON.stringify(learnedMappings));
+            }
 
             const newTx = {
-                id: Math.floor(Math.random() * 1000000000),
-                category_id: parseInt(document.getElementById('val-category').value),
-                vendor: document.getElementById('val-vendor').value,
-                amount: parseFloat(document.getElementById('val-amount').value),
+                id: crypto.randomUUID(),
+                category_id: selectedCategoryId,
+                vendor: vendorName,
+                amount: parseFloat(document.getElementById('val-amount').value) || 0,
                 date: targetDate,
                 month: selectedMonthStr
             };
@@ -652,7 +514,7 @@
 
             let context = `Du bist ein präziser Schweizer Budget-Assistent. Hier sind die echten Live-Daten des Users für den Monat ${selectedMonthStr}:\n`;
             categories.forEach(c => {
-                const spent = transactions.filter(t => t.category_id == c.id && t.month === selectedMonthStr).reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                const spent = transactions.filter(t => String(t.category_id) === String(c.id) && t.month === selectedMonthStr).reduce((sum, t) => sum + parseFloat(t.amount), 0);
                 const limit = c.budget_type === 2 ? c.total_limit / 12 : c.total_limit;
                 context += `- Kategorie: ${c.name} | Limit/Mt: ${limit.toFixed(2)} CHF | Ausgegeben: ${spent.toFixed(2)} CHF\n`;
             });
@@ -681,7 +543,7 @@
             const type = parseInt(document.getElementById('new-cat-type').value);
 
             if(name && !isNaN(limit)) {
-                const newCat = { id: Math.floor(Math.random() * 1000000000), name: name, total_limit: limit, budget_type: type };
+                const newCat = { id: crypto.randomUUID(), name: name, total_limit: limit, budget_type: type };
                 categories.push(newCat);
                 windowSave();
                 document.getElementById('new-cat-name').value = '';
@@ -693,7 +555,7 @@
         window.editCategory = (id, currentLimit) => {
             const newLimit = prompt("Neues Limit für diese Kategorie eingeben (CHF):", currentLimit);
             if (newLimit !== null && !isNaN(newLimit) && newLimit.trim() !== "") {
-                const cat = categories.find(c => c.id === id);
+                const cat = categories.find(c => String(c.id) === String(id));
                 if (cat) {
                     cat.total_limit = parseFloat(newLimit);
                     windowSave();
@@ -704,7 +566,7 @@
 
         window.deleteTx = (id) => { 
             if(confirm("Löschen?")) { 
-                transactions = transactions.filter(t => t.id !== id);
+                transactions = transactions.filter(t => String(t.id) !== String(id));
                 windowSave();
                 loadAllData(); 
             } 
@@ -712,7 +574,7 @@
         
         window.deleteCategory = (id) => { 
             if(confirm("Kategorie löschen?")) { 
-                categories = categories.filter(c => c.id !== id);
+                categories = categories.filter(c => String(c.id) !== String(id));
                 windowSave();
                 loadAllData(); 
             } 
@@ -723,7 +585,7 @@
             const catSums = {};
             
             currentMonthTxs.forEach(t => {
-                const cat = categories.find(c => c.id == t.category_id);
+                const cat = categories.find(c => String(c.id) === String(t.category_id));
                 const name = cat ? cat.name : "Unbekannt";
                 catSums[name] = (catSums[name] || 0) + parseFloat(t.amount);
             });
@@ -761,7 +623,7 @@
             });
 
             const months = [...new Set(transactions.map(t => t.month))].sort().slice(-6);
-            const totals = months.map(m => transactions.filter(t => t.month === m).reduce((sum, t) => sum + parseFloat(t.amount), 0));
+            const totals = months.map(m => transactions.filter(t => m === t.month).reduce((sum, t) => sum + parseFloat(t.amount), 0));
 
             const ctxHist = document.getElementById('chart-historie').getContext('2d');
             if(chartHistorieInstance) chartHistorieInstance.destroy();
@@ -785,6 +647,3 @@
                 }
             });
         }
-    </script>
-</body>
-</html>
